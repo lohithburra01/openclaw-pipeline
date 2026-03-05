@@ -1,0 +1,57 @@
+{
+  "race": {
+    "sessions": [
+      "FP1",
+      "FP2",
+      "FP3",
+      "Q",
+      "R"
+    ],
+    "q_segments": [
+      "Q1",
+      "Q2",
+      "Q3"
+    ],
+    "display": {
+      "FP1": "Free Practice 1",
+      "FP2": "Free Practice 2",
+      "FP3": "Free Practice 3",
+      "Q": "Qualifying",
+      "R": "Race"
+    }
+  },
+  "sprint_weekend": {
+    "sessions": [
+      "FP1",
+      "SQ",
+      "Sprint",
+      "Q",
+      "R"
+    ],
+    "q_segments": [
+      "Q1",
+      "Q2",
+      "Q3"
+    ],
+    "display": {
+      "FP1": "Free Practice 1",
+      "SQ": "Sprint Qualifying",
+      "Sprint": "Sprint Race",
+      "Q": "Qualifying",
+      "R": "Race"
+    }
+  },
+  "testing": {
+    "sessions": [
+      "Day 1",
+      "Day 2",
+      "Day 3"
+    ],
+    "q_segments": [],
+    "display": {
+      "Day 1": "Day 1",
+      "Day 2": "Day 2",
+      "Day 3": "Day 3"
+    }
+  }
+}

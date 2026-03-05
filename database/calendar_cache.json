@@ -1,0 +1,3322 @@
+{
+  "2018": [
+    {
+      "round": 1,
+      "event_name": "Australian Grand Prix",
+      "location": "Melbourne",
+      "country": "Australia",
+      "event_type": "race",
+      "track_key": "australia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 3,
+      "event_name": "Chinese Grand Prix",
+      "location": "Shanghai",
+      "country": "China",
+      "event_type": "race",
+      "track_key": "china",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "race",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 5,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monte Carlo",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 7,
+      "event_name": "Canadian Grand Prix",
+      "location": "Montréal",
+      "country": "Canada",
+      "event_type": "race",
+      "track_key": "canada",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "French Grand Prix",
+      "location": "Le Castellet",
+      "country": "France",
+      "event_type": "race",
+      "track_key": "france",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "Great Britain",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "German Grand Prix",
+      "location": "Hockenheim",
+      "country": "Germany",
+      "event_type": "race",
+      "track_key": "germany",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 12,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 13,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "race",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 15,
+      "event_name": "Singapore Grand Prix",
+      "location": "Singapore",
+      "country": "Singapore",
+      "event_type": "race",
+      "track_key": "singapore",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Russian Grand Prix",
+      "location": "Sochi",
+      "country": "Russia",
+      "event_type": "race",
+      "track_key": "russia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Japanese Grand Prix",
+      "location": "Suzuka",
+      "country": "Japan",
+      "event_type": "race",
+      "track_key": "japan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 18,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 19,
+      "event_name": "Mexican Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 20,
+      "event_name": "Brazilian Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "race",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 21,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Marina",
+      "country": "United Arab Emirates",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2019": [
+    {
+      "round": 1,
+      "event_name": "Australian Grand Prix",
+      "location": "Melbourne",
+      "country": "Australia",
+      "event_type": "race",
+      "track_key": "australia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 3,
+      "event_name": "Chinese Grand Prix",
+      "location": "Shanghai",
+      "country": "China",
+      "event_type": "race",
+      "track_key": "china",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "race",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 5,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monte Carlo",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 7,
+      "event_name": "Canadian Grand Prix",
+      "location": "Montréal",
+      "country": "Canada",
+      "event_type": "race",
+      "track_key": "canada",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "French Grand Prix",
+      "location": "Le Castellet",
+      "country": "France",
+      "event_type": "race",
+      "track_key": "france",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "Great Britain",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "German Grand Prix",
+      "location": "Hockenheim",
+      "country": "Germany",
+      "event_type": "race",
+      "track_key": "germany",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 12,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 13,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "race",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 15,
+      "event_name": "Singapore Grand Prix",
+      "location": "Singapore",
+      "country": "Singapore",
+      "event_type": "race",
+      "track_key": "singapore",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Russian Grand Prix",
+      "location": "Sochi",
+      "country": "Russia",
+      "event_type": "race",
+      "track_key": "russia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Japanese Grand Prix",
+      "location": "Suzuka",
+      "country": "Japan",
+      "event_type": "race",
+      "track_key": "japan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 18,
+      "event_name": "Mexican Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 19,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 20,
+      "event_name": "Brazilian Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "race",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 21,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Island",
+      "country": "Abu Dhabi",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2020": [
+    {
+      "round": 0,
+      "event_name": "Pre-Season Test 1",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 0,
+      "event_name": "Pre-Season Test 2",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 1,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Styrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 3,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "Great Britain",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 5,
+      "event_name": "70th Anniversary Grand Prix",
+      "location": "Silverstone",
+      "country": "Great Britain",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 7,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "race",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Tuscan Grand Prix",
+      "location": "Mugello",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "mugello",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "Russian Grand Prix",
+      "location": "Sochi",
+      "country": "Russia",
+      "event_type": "race",
+      "track_key": "russia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "Eifel Grand Prix",
+      "location": "Nürburgring",
+      "country": "Germany",
+      "event_type": "race",
+      "track_key": "nurburgring",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 12,
+      "event_name": "Portuguese Grand Prix",
+      "location": "Portimão",
+      "country": "Portugal",
+      "event_type": "race",
+      "track_key": "portugal",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 13,
+      "event_name": "Emilia Romagna Grand Prix",
+      "location": "Imola",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "emilia_romagna",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Turkish Grand Prix",
+      "location": "Istanbul",
+      "country": "Turkey",
+      "event_type": "race",
+      "track_key": "turkey",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 15,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Sakhir Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Island",
+      "country": "Abu Dhabi",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2021": [
+    {
+      "round": 0,
+      "event_name": "Pre-Season Test",
+      "location": "Bahrain",
+      "country": "Bahrain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 1,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Emilia Romagna Grand Prix",
+      "location": "Imola",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "emilia_romagna",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 3,
+      "event_name": "Portuguese Grand Prix",
+      "location": "Portimão",
+      "country": "Portugal",
+      "event_type": "race",
+      "track_key": "portugal",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 5,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monte Carlo",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "race",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 7,
+      "event_name": "French Grand Prix",
+      "location": "Le Castellet",
+      "country": "France",
+      "event_type": "race",
+      "track_key": "france",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "Styrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "Great Britain",
+      "event_type": "sprint_weekend",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 11,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 12,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "race",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 13,
+      "event_name": "Dutch Grand Prix",
+      "location": "Zandvoort",
+      "country": "Netherlands",
+      "event_type": "race",
+      "track_key": "netherlands",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "sprint_weekend",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 15,
+      "event_name": "Russian Grand Prix",
+      "location": "Sochi",
+      "country": "Russia",
+      "event_type": "race",
+      "track_key": "russia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Turkish Grand Prix",
+      "location": "Istanbul",
+      "country": "Turkey",
+      "event_type": "race",
+      "track_key": "turkey",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 18,
+      "event_name": "Mexico City Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 19,
+      "event_name": "São Paulo Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "sprint_weekend",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 20,
+      "event_name": "Qatar Grand Prix",
+      "location": "Lusail",
+      "country": "Qatar",
+      "event_type": "race",
+      "track_key": "qatar",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 21,
+      "event_name": "Saudi Arabian Grand Prix",
+      "location": "Jeddah",
+      "country": "Saudi Arabia",
+      "event_type": "race",
+      "track_key": "saudi_arabia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 22,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Island",
+      "country": "Abu Dhabi",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2022": [
+    {
+      "round": 0,
+      "event_name": "Pre-Season Track Session",
+      "location": "Spain",
+      "country": "Spain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 0,
+      "event_name": "Pre-Season Test",
+      "location": "Bahrain",
+      "country": "Bahrain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 1,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Saudi Arabian Grand Prix",
+      "location": "Jeddah",
+      "country": "Saudi Arabia",
+      "event_type": "race",
+      "track_key": "saudi_arabia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 3,
+      "event_name": "Australian Grand Prix",
+      "location": "Melbourne",
+      "country": "Australia",
+      "event_type": "race",
+      "track_key": "australia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Emilia Romagna Grand Prix",
+      "location": "Imola",
+      "country": "Italy",
+      "event_type": "sprint_weekend",
+      "track_key": "emilia_romagna",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 5,
+      "event_name": "Miami Grand Prix",
+      "location": "Miami",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "miami",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 7,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monaco",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "race",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Canadian Grand Prix",
+      "location": "Montréal",
+      "country": "Canada",
+      "event_type": "race",
+      "track_key": "canada",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "Great Britain",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "sprint_weekend",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 12,
+      "event_name": "French Grand Prix",
+      "location": "Le Castellet",
+      "country": "France",
+      "event_type": "race",
+      "track_key": "france",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 13,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "race",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 15,
+      "event_name": "Dutch Grand Prix",
+      "location": "Zandvoort",
+      "country": "Netherlands",
+      "event_type": "race",
+      "track_key": "netherlands",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Singapore Grand Prix",
+      "location": "Marina Bay",
+      "country": "Singapore",
+      "event_type": "race",
+      "track_key": "singapore",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 18,
+      "event_name": "Japanese Grand Prix",
+      "location": "Suzuka",
+      "country": "Japan",
+      "event_type": "race",
+      "track_key": "japan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 19,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 20,
+      "event_name": "Mexico City Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 21,
+      "event_name": "São Paulo Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "sprint_weekend",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 22,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Island",
+      "country": "Abu Dhabi",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2023": [
+    {
+      "round": 0,
+      "event_name": "Pre-Season Testing",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 1,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Saudi Arabian Grand Prix",
+      "location": "Jeddah",
+      "country": "Saudi Arabia",
+      "event_type": "race",
+      "track_key": "saudi_arabia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 3,
+      "event_name": "Australian Grand Prix",
+      "location": "Melbourne",
+      "country": "Australia",
+      "event_type": "race",
+      "track_key": "australia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "sprint_weekend",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 5,
+      "event_name": "Miami Grand Prix",
+      "location": "Miami",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "miami",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monaco",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 7,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "Canadian Grand Prix",
+      "location": "Montréal",
+      "country": "Canada",
+      "event_type": "race",
+      "track_key": "canada",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "sprint_weekend",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 10,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "Great Britain",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 12,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "sprint_weekend",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 13,
+      "event_name": "Dutch Grand Prix",
+      "location": "Zandvoort",
+      "country": "Netherlands",
+      "event_type": "race",
+      "track_key": "netherlands",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 15,
+      "event_name": "Singapore Grand Prix",
+      "location": "Marina Bay",
+      "country": "Singapore",
+      "event_type": "race",
+      "track_key": "singapore",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Japanese Grand Prix",
+      "location": "Suzuka",
+      "country": "Japan",
+      "event_type": "race",
+      "track_key": "japan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Qatar Grand Prix",
+      "location": "Lusail",
+      "country": "Qatar",
+      "event_type": "sprint_weekend",
+      "track_key": "qatar",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 18,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "sprint_weekend",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 19,
+      "event_name": "Mexico City Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 20,
+      "event_name": "São Paulo Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "sprint_weekend",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 21,
+      "event_name": "Las Vegas Grand Prix",
+      "location": "Las Vegas",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "las_vegas",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 22,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Island",
+      "country": "Abu Dhabi",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2024": [
+    {
+      "round": 0,
+      "event_name": "Pre-Season Testing",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 1,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Saudi Arabian Grand Prix",
+      "location": "Jeddah",
+      "country": "Saudi Arabia",
+      "event_type": "race",
+      "track_key": "saudi_arabia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 3,
+      "event_name": "Australian Grand Prix",
+      "location": "Melbourne",
+      "country": "Australia",
+      "event_type": "race",
+      "track_key": "australia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Japanese Grand Prix",
+      "location": "Suzuka",
+      "country": "Japan",
+      "event_type": "race",
+      "track_key": "japan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 5,
+      "event_name": "Chinese Grand Prix",
+      "location": "Shanghai",
+      "country": "China",
+      "event_type": "sprint_weekend",
+      "track_key": "china",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 6,
+      "event_name": "Miami Grand Prix",
+      "location": "Miami",
+      "country": "United States",
+      "event_type": "sprint_weekend",
+      "track_key": "miami",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 7,
+      "event_name": "Emilia Romagna Grand Prix",
+      "location": "Imola",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "emilia_romagna",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monaco",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Canadian Grand Prix",
+      "location": "Montréal",
+      "country": "Canada",
+      "event_type": "race",
+      "track_key": "canada",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "sprint_weekend",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 12,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "United Kingdom",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 13,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "race",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 15,
+      "event_name": "Dutch Grand Prix",
+      "location": "Zandvoort",
+      "country": "Netherlands",
+      "event_type": "race",
+      "track_key": "netherlands",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "race",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 18,
+      "event_name": "Singapore Grand Prix",
+      "location": "Marina Bay",
+      "country": "Singapore",
+      "event_type": "race",
+      "track_key": "singapore",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 19,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "sprint_weekend",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 20,
+      "event_name": "Mexico City Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 21,
+      "event_name": "São Paulo Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "sprint_weekend",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 22,
+      "event_name": "Las Vegas Grand Prix",
+      "location": "Las Vegas",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "las_vegas",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 23,
+      "event_name": "Qatar Grand Prix",
+      "location": "Lusail",
+      "country": "Qatar",
+      "event_type": "sprint_weekend",
+      "track_key": "qatar",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 24,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Island",
+      "country": "United Arab Emirates",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2025": [
+    {
+      "round": 0,
+      "event_name": "Pre-Season Testing",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 1,
+      "event_name": "Australian Grand Prix",
+      "location": "Melbourne",
+      "country": "Australia",
+      "event_type": "race",
+      "track_key": "australia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Chinese Grand Prix",
+      "location": "Shanghai",
+      "country": "China",
+      "event_type": "sprint_weekend",
+      "track_key": "china",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 3,
+      "event_name": "Japanese Grand Prix",
+      "location": "Suzuka",
+      "country": "Japan",
+      "event_type": "race",
+      "track_key": "japan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 5,
+      "event_name": "Saudi Arabian Grand Prix",
+      "location": "Jeddah",
+      "country": "Saudi Arabia",
+      "event_type": "race",
+      "track_key": "saudi_arabia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Miami Grand Prix",
+      "location": "Miami Gardens",
+      "country": "United States",
+      "event_type": "sprint_weekend",
+      "track_key": "miami",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 7,
+      "event_name": "Emilia Romagna Grand Prix",
+      "location": "Imola",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "emilia_romagna",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 8,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monaco",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Spanish Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "Canadian Grand Prix",
+      "location": "Montréal",
+      "country": "Canada",
+      "event_type": "race",
+      "track_key": "canada",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 12,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "United Kingdom",
+      "event_type": "race",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 13,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "sprint_weekend",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 14,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 15,
+      "event_name": "Dutch Grand Prix",
+      "location": "Zandvoort",
+      "country": "Netherlands",
+      "event_type": "race",
+      "track_key": "netherlands",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "race",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 18,
+      "event_name": "Singapore Grand Prix",
+      "location": "Marina Bay",
+      "country": "Singapore",
+      "event_type": "race",
+      "track_key": "singapore",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 19,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "sprint_weekend",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 20,
+      "event_name": "Mexico City Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 21,
+      "event_name": "São Paulo Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "sprint_weekend",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 22,
+      "event_name": "Las Vegas Grand Prix",
+      "location": "Las Vegas",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "las_vegas",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 23,
+      "event_name": "Qatar Grand Prix",
+      "location": "Lusail",
+      "country": "Qatar",
+      "event_type": "sprint_weekend",
+      "track_key": "qatar",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 24,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Island",
+      "country": "United Arab Emirates",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ],
+  "2026": [
+    {
+      "round": 0,
+      "event_name": "Pre-Season Testing",
+      "location": "Bahrain",
+      "country": "Bahrain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 0,
+      "event_name": "Pre-Season Testing",
+      "location": "Bahrain",
+      "country": "Bahrain",
+      "event_type": "testing",
+      "track_key": "bahrain",
+      "sessions": [
+        "Day 1",
+        "Day 2",
+        "Day 3"
+      ],
+      "has_sprint": false,
+      "test_days": 3
+    },
+    {
+      "round": 1,
+      "event_name": "Australian Grand Prix",
+      "location": "Melbourne",
+      "country": "Australia",
+      "event_type": "race",
+      "track_key": "australia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 2,
+      "event_name": "Chinese Grand Prix",
+      "location": "Shanghai",
+      "country": "China",
+      "event_type": "sprint_weekend",
+      "track_key": "china",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 3,
+      "event_name": "Japanese Grand Prix",
+      "location": "Suzuka",
+      "country": "Japan",
+      "event_type": "race",
+      "track_key": "japan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 4,
+      "event_name": "Bahrain Grand Prix",
+      "location": "Sakhir",
+      "country": "Bahrain",
+      "event_type": "race",
+      "track_key": "bahrain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 5,
+      "event_name": "Saudi Arabian Grand Prix",
+      "location": "Jeddah",
+      "country": "Saudi Arabia",
+      "event_type": "race",
+      "track_key": "saudi_arabia",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 6,
+      "event_name": "Miami Grand Prix",
+      "location": "Miami Gardens",
+      "country": "United States",
+      "event_type": "sprint_weekend",
+      "track_key": "miami",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 7,
+      "event_name": "Canadian Grand Prix",
+      "location": "Montréal",
+      "country": "Canada",
+      "event_type": "sprint_weekend",
+      "track_key": "canada",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 8,
+      "event_name": "Monaco Grand Prix",
+      "location": "Monte Carlo",
+      "country": "Monaco",
+      "event_type": "race",
+      "track_key": "monaco",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 9,
+      "event_name": "Barcelona Grand Prix",
+      "location": "Barcelona",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 10,
+      "event_name": "Austrian Grand Prix",
+      "location": "Spielberg",
+      "country": "Austria",
+      "event_type": "race",
+      "track_key": "austria",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 11,
+      "event_name": "British Grand Prix",
+      "location": "Silverstone",
+      "country": "United Kingdom",
+      "event_type": "sprint_weekend",
+      "track_key": "britain",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 12,
+      "event_name": "Belgian Grand Prix",
+      "location": "Spa-Francorchamps",
+      "country": "Belgium",
+      "event_type": "sprint_weekend",
+      "track_key": "belgium",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 13,
+      "event_name": "Hungarian Grand Prix",
+      "location": "Budapest",
+      "country": "Hungary",
+      "event_type": "race",
+      "track_key": "hungary",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 14,
+      "event_name": "Dutch Grand Prix",
+      "location": "Zandvoort",
+      "country": "Netherlands",
+      "event_type": "sprint_weekend",
+      "track_key": "netherlands",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 15,
+      "event_name": "Italian Grand Prix",
+      "location": "Monza",
+      "country": "Italy",
+      "event_type": "race",
+      "track_key": "italy",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 16,
+      "event_name": "Spanish Grand Prix",
+      "location": "Madrid",
+      "country": "Spain",
+      "event_type": "race",
+      "track_key": "spain",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 17,
+      "event_name": "Azerbaijan Grand Prix",
+      "location": "Baku",
+      "country": "Azerbaijan",
+      "event_type": "race",
+      "track_key": "azerbaijan",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 18,
+      "event_name": "Singapore Grand Prix",
+      "location": "Marina Bay",
+      "country": "Singapore",
+      "event_type": "sprint_weekend",
+      "track_key": "singapore",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 19,
+      "event_name": "United States Grand Prix",
+      "location": "Austin",
+      "country": "United States",
+      "event_type": "sprint_weekend",
+      "track_key": "usa",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 20,
+      "event_name": "Mexico City Grand Prix",
+      "location": "Mexico City",
+      "country": "Mexico",
+      "event_type": "race",
+      "track_key": "mexico",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 21,
+      "event_name": "São Paulo Grand Prix",
+      "location": "São Paulo",
+      "country": "Brazil",
+      "event_type": "race",
+      "track_key": "brazil",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 22,
+      "event_name": "Las Vegas Grand Prix",
+      "location": "Las Vegas",
+      "country": "United States",
+      "event_type": "race",
+      "track_key": "las_vegas",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    },
+    {
+      "round": 23,
+      "event_name": "Qatar Grand Prix",
+      "location": "Lusail",
+      "country": "Qatar",
+      "event_type": "sprint_weekend",
+      "track_key": "qatar",
+      "sessions": [
+        "FP1",
+        "SQ",
+        "Sprint",
+        "Q",
+        "R"
+      ],
+      "has_sprint": true
+    },
+    {
+      "round": 24,
+      "event_name": "Abu Dhabi Grand Prix",
+      "location": "Yas Marina",
+      "country": "United Arab Emirates",
+      "event_type": "race",
+      "track_key": "abu_dhabi",
+      "sessions": [
+        "FP1",
+        "FP2",
+        "FP3",
+        "Q",
+        "R"
+      ],
+      "has_sprint": false
+    }
+  ]
+}

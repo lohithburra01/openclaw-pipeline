@@ -1,0 +1,290 @@
+{
+  "bahrain": {
+    "track_name": "Bahrain International Circuit",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2014,
+        "end_year": 2025,
+        "file_path": "tracks/bahrain_modern.blend"
+      }
+    ]
+  },
+  "saudi_arabia": {
+    "track_name": "Jeddah Corniche Circuit",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2021,
+        "end_year": 2025,
+        "file_path": "tracks/jeddah_modern.blend"
+      }
+    ]
+  },
+  "australia": {
+    "track_name": "Albert Park Circuit",
+    "versions": [
+      {
+        "version_id": "v2_modern",
+        "start_year": 2022,
+        "end_year": 2025,
+        "file_path": "tracks/albert_park_modern.blend"
+      },
+      {
+        "version_id": "v1_classic",
+        "start_year": 1996,
+        "end_year": 2019,
+        "file_path": "tracks/albert_park_classic.blend"
+      }
+    ]
+  },
+  "japan": {
+    "track_name": "Suzuka International Racing Course",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2000,
+        "end_year": 2025,
+        "file_path": "tracks/suzuka_modern.blend"
+      }
+    ]
+  },
+  "china": {
+    "track_name": "Shanghai International Circuit",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2004,
+        "end_year": 2025,
+        "file_path": "tracks/shanghai_modern.blend"
+      }
+    ]
+  },
+  "miami": {
+    "track_name": "Miami International Autodrome",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2022,
+        "end_year": 2025,
+        "file_path": "tracks/miami_modern.blend"
+      }
+    ]
+  },
+  "emilia_romagna": {
+    "track_name": "Autodromo Internazionale Enzo e Dino Ferrari",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2020,
+        "end_year": 2025,
+        "file_path": "tracks/imola_modern.blend"
+      }
+    ]
+  },
+  "monaco": {
+    "track_name": "Circuit de Monaco",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2015,
+        "end_year": 2025,
+        "file_path": "tracks/monaco_modern.blend"
+      }
+    ]
+  },
+  "canada": {
+    "track_name": "Circuit Gilles Villeneuve",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2010,
+        "end_year": 2025,
+        "file_path": "tracks/montreal_modern.blend"
+      }
+    ]
+  },
+  "spain": {
+    "track_name": "Circuit de Barcelona-Catalunya",
+    "versions": [
+      {
+        "version_id": "v2_no_chicane",
+        "start_year": 2023,
+        "end_year": 2025,
+        "file_path": "tracks/barcelona_no_chicane.blend"
+      },
+      {
+        "version_id": "v1_chicane",
+        "start_year": 2007,
+        "end_year": 2022,
+        "file_path": "tracks/barcelona_chicane.blend"
+      }
+    ]
+  },
+  "austria": {
+    "track_name": "Red Bull Ring",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2014,
+        "end_year": 2025,
+        "file_path": "tracks/red_bull_ring_modern.blend"
+      }
+    ]
+  },
+  "britain": {
+    "track_name": "Silverstone Circuit",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2011,
+        "end_year": 2025,
+        "file_path": "tracks/silverstone_modern.blend"
+      }
+    ]
+  },
+  "hungary": {
+    "track_name": "Hungaroring",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2003,
+        "end_year": 2025,
+        "file_path": "tracks/hungaroring_modern.blend"
+      }
+    ]
+  },
+  "belgium": {
+    "track_name": "Circuit de Spa-Francorchamps",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2007,
+        "end_year": 2025,
+        "file_path": "tracks/spa_modern.blend"
+      }
+    ]
+  },
+  "netherlands": {
+    "track_name": "Circuit Zandvoort",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2021,
+        "end_year": 2025,
+        "file_path": "tracks/zandvoort_modern.blend"
+      }
+    ]
+  },
+  "italy": {
+    "track_name": "Autodromo Nazionale Monza",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2000,
+        "end_year": 2025,
+        "file_path": "tracks/monza_modern.blend"
+      }
+    ]
+  },
+  "azerbaijan": {
+    "track_name": "Baku City Circuit",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2016,
+        "end_year": 2025,
+        "file_path": "tracks/baku_modern.blend"
+      }
+    ]
+  },
+  "singapore": {
+    "track_name": "Marina Bay Street Circuit",
+    "versions": [
+      {
+        "version_id": "v3_straight",
+        "start_year": 2023,
+        "end_year": 2025,
+        "file_path": "tracks/singapore_straight.blend"
+      },
+      {
+        "version_id": "v2_sling",
+        "start_year": 2013,
+        "end_year": 2022,
+        "file_path": "tracks/singapore_sling.blend"
+      }
+    ]
+  },
+  "usa": {
+    "track_name": "Circuit of The Americas",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2012,
+        "end_year": 2025,
+        "file_path": "tracks/cota_modern.blend"
+      }
+    ]
+  },
+  "mexico": {
+    "track_name": "Autodromo Hermanos Rodriguez",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2015,
+        "end_year": 2025,
+        "file_path": "tracks/mexico_modern.blend"
+      }
+    ]
+  },
+  "brazil": {
+    "track_name": "Autodromo Jose Carlos Pace",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2000,
+        "end_year": 2025,
+        "file_path": "tracks/interlagos_modern.blend"
+      }
+    ]
+  },
+  "las_vegas": {
+    "track_name": "Las Vegas Strip Circuit",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2023,
+        "end_year": 2025,
+        "file_path": "tracks/vegas_modern.blend"
+      }
+    ]
+  },
+  "qatar": {
+    "track_name": "Lusail International Circuit",
+    "versions": [
+      {
+        "version_id": "v1_modern",
+        "start_year": 2021,
+        "end_year": 2025,
+        "file_path": "tracks/lusail_modern.blend"
+      }
+    ]
+  },
+  "abu_dhabi": {
+    "track_name": "Yas Marina Circuit",
+    "versions": [
+      {
+        "version_id": "v2_fast",
+        "start_year": 2021,
+        "end_year": 2025,
+        "file_path": "tracks/abudhabi_fast.blend"
+      },
+      {
+        "version_id": "v1_twist",
+        "start_year": 2009,
+        "end_year": 2020,
+        "file_path": "tracks/abudhabi_twist.blend"
+      }
+    ]
+  }
+}

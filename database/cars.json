@@ -1,0 +1,52 @@
+{
+    "2024": {
+        "Red Bull Racing": {
+            "VER": {
+                "standard": "cars/2024/Red Bull Racing/VER.blend",
+                "specials": {}
+            },
+            "PER": {
+                "standard": "cars/2024/Red Bull Racing/PER.blend",
+                "specials": {}
+            }
+        },
+        "Ferrari": {
+            "LEC": {
+                "standard": "cars/2024/Ferrari/LEC.blend",
+                "specials": {}
+            },
+            "SAI": {
+                "standard": "cars/2024/Ferrari/SAI.blend",
+                "specials": {}
+            }
+        },
+        "McLaren": {
+            "NOR": {
+                "standard": "cars/2024/McLaren/NOR.blend",
+                "specials": {}
+            },
+            "PIA": {
+                "standard": "cars/2024/McLaren/PIA.blend",
+                "specials": {}
+            }
+        },
+        "Mercedes": {
+            "HAM": {
+                "standard": "cars/2024/Mercedes/HAM.blend",
+                "specials": {}
+            },
+            "RUS": {
+                "standard": "cars/2024/Mercedes/RUS.blend",
+                "specials": {}
+            }
+        }
+    },
+    "2023": {
+        "Red Bull Racing": {
+            "VER": {
+                "standard": "cars/2023/Red Bull Racing/VER.blend",
+                "specials": {}
+            }
+        }
+    }
+}

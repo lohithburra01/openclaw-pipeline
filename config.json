@@ -1,0 +1,34 @@
+{
+  "jobs": [
+    {
+      "mode": "top3",
+      "track": "Bahrain Grand Prix",
+      "year": 2024,
+      "session": "Q",
+      "fps": 30,
+      "zoom_factor": 3.0,
+      "trail_frames": 60
+    },
+    {
+      "mode": "explicit",
+      "track": "Monaco Grand Prix",
+      "year": 2024,
+      "session": "Q",
+      "drivers": ["VER", "LEC", "NOR"],
+      "fps": 30,
+      "zoom_factor": 3.5,
+      "trail_frames": 80
+    },
+    {
+      "mode": "cross",
+      "track": "Silverstone Circuit",
+      "configs": [
+        {"driver": "HAM", "year": 2020, "session": "Q"},
+        {"driver": "VER", "year": 2024, "session": "Q"}
+      ],
+      "fps": 30,
+      "zoom_factor": 3.0,
+      "trail_frames": 60
+    }
+  ]
+}
