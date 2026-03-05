@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # render.py — F1 Formulytics Cloud Renderer
-# Runs headless on Google Colab / any Linux machine
+# Runs headless on Google Colab
+#
+# Colab setup (run once):
+#   !pip install fastf1 opencv-python-headless pillow scipy numpy -q
 #
 # Usage:
-#   python render.py --config config.json
-#   python render.py --config config.json --job 0   (run specific job index)
-#
-# Colab setup (run once before this script):
-#   !pip install fastf1 opencv-python-headless pillow scipy numpy
+#   !python render.py --config config.json
 
 import fastf1
 import fastf1.plotting
@@ -16,173 +15,11 @@ import cv2
 import os
 import json
 import argparse
-import sys
 from PIL import Image, ImageDraw, ImageFont
 from scipy.interpolate import interp1d, splprep, splev
 from scipy.signal import correlate, medfilt
 import warnings
 warnings.simplefilter(action='ignore')
-
-# ==========================================
-# 0. LOAD CONFIG + DATABASE
-# ==========================================
-
-def load_json(path):
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-def load_databases(db_dir):
-    try:
-        cal  = load_json(os.path.join(db_dir, "calendar_cache.json"))
-        race = load_json(os.path.join(db_dir, "drivers_by_race.json"))
-        seas = load_json(os.path.join(db_dir, "drivers_by_season.json"))
-        print(f"✅ Database loaded from: {db_dir}")
-        return cal, race, seas
-    except Exception as e:
-        print(f"⚠️  Database load warning: {e}")
-        return {}, {}, {}
-
-# ==========================================
-# 1. SCENARIO RESOLVER
-# Converts a config job into explicit driver configs
-# ==========================================
-
-def resolve_job(job, CALENDAR_DB, DRIVERS_DB, SEASON_DB):
-    """
-    Supported modes:
-
-    explicit — you name the drivers:
-      { "mode": "explicit", "track": "Bahrain Grand Prix", "year": 2024,
-        "session": "Q", "drivers": ["VER", "NOR", "PIA"] }
-
-    top3 / top5 — pull from DB, fallback to FastF1:
-      { "mode": "top3", "track": "Bahrain Grand Prix", "year": 2024, "session": "Q" }
-
-    cross — different years/sessions per driver:
-      { "mode": "cross", "track": "Bahrain Grand Prix",
-        "configs": [
-          {"driver": "VER", "year": 2024, "session": "Q"},
-          {"driver": "HAM", "year": 2020, "session": "Q"}
-        ]}
-    """
-    mode    = job.get("mode", "explicit")
-    track   = job["track"]
-    output  = job.get("output", None)  # optional output filename override
-
-    if mode == "explicit":
-        year, session, drivers = job["year"], job["session"], job["drivers"]
-        configs = [{"driver": d, "year": year, "session": session} for d in drivers]
-        return track, configs, True, output
-
-    elif mode in ("top3", "top5"):
-        n = 3 if mode == "top3" else 5
-        year, session = job["year"], job["session"]
-        drivers = _top_n_from_db(n, track, year, session, DRIVERS_DB, SEASON_DB)
-        if not drivers:
-            print(f"⚠️  DB miss for {mode} — falling back to FastF1 live lookup...")
-            drivers = _top_n_from_fastf1(n, track, year, session)
-        print(f"✅ Resolved {mode}: {drivers}")
-        configs = [{"driver": d, "year": year, "session": session} for d in drivers]
-        return track, configs, True, output
-
-    elif mode == "cross":
-        configs = job["configs"]
-        return track, configs, False, output
-
-    else:
-        raise ValueError(f"Unknown mode: '{mode}'")
-
-def _top_n_from_db(n, track, year, session, DRIVERS_DB, SEASON_DB):
-    yr = str(year)
-    # Try race-specific first
-    if yr in DRIVERS_DB and track in DRIVERS_DB[yr]:
-        sess_data = DRIVERS_DB[yr][track]
-        # drivers_by_race can be keyed by session or flat list
-        if isinstance(sess_data, dict) and session in sess_data:
-            return [d['code'] for d in sess_data[session]][:n]
-        elif isinstance(sess_data, list):
-            return [d['code'] for d in sess_data][:n]
-    # Fallback to season list
-    if yr in SEASON_DB:
-        return [d['code'] for d in SEASON_DB[yr]][:n]
-    return []
-
-def _top_n_fastf1(n, track, year, session):
-    try:
-        fastf1.Cache.enable_cache('cache')
-    except:
-        pass
-    s = fastf1.get_session(year, track, session)
-    s.load(telemetry=False, weather=False, messages=False)
-    fastest = s.laps.pick_quicklaps().sort_values(by='LapTime')
-    seen = []
-    for _, lap in fastest.iterrows():
-        drv = lap['Driver']
-        if drv not in seen:
-            seen.append(drv)
-        if len(seen) == n:
-            break
-    return seen
-
-# ==========================================
-# 2. HIFI DELTA ENGINE
-# ==========================================
-
-def calculate_hifi_delta(ref_trace, tgt_trace):
-    master_len = ref_trace['dist'].max()
-    scale = master_len / tgt_trace['dist'].max()
-    tgt_dist_scaled = tgt_trace['dist'] * scale
-
-    grid_len = 10000; window_size = 300; step_size = 50
-    common_grid = np.linspace(0, master_len, grid_len)
-    v_ref = np.interp(common_grid, ref_trace['dist'], ref_trace['speed'])
-    v_tgt = np.interp(common_grid, tgt_dist_scaled, tgt_trace['speed'])
-
-    shifts, positions = [], []
-    for start_pos in range(0, int(master_len), step_size):
-        end_pos = start_pos + window_size
-        if end_pos > master_len:
-            break
-        i0 = int((start_pos / master_len) * grid_len)
-        i1 = int((end_pos / master_len) * grid_len)
-        corr = correlate(v_ref[i0:i1], v_tgt[i0:i1], mode='same')
-        if len(corr) == 0:
-            continue
-        lag_idx = np.argmax(corr) - (len(corr) // 2)
-        shift_m = lag_idx * (master_len / grid_len)
-        if abs(shift_m) < 40:
-            shifts.append(shift_m)
-            positions.append(start_pos + window_size / 2)
-
-    if positions:
-        if positions[0] > 0:
-            positions.insert(0, 0); shifts.insert(0, shifts[0])
-        if positions[-1] < master_len:
-            positions.append(master_len); shifts.append(shifts[-1])
-        positions, shifts = zip(*sorted(zip(positions, shifts)))
-        shift_interp = interp1d(positions, shifts, kind='linear', fill_value="extrapolate")
-        tgt_dist_warped = tgt_dist_scaled + shift_interp(tgt_dist_scaled)
-    else:
-        tgt_dist_warped = tgt_dist_scaled
-
-    f_tgt_time = interp1d(tgt_dist_warped, tgt_trace['time'], fill_value="extrapolate")
-    raw_delta = f_tgt_time(ref_trace['dist']) - ref_trace['time']
-    delta_smooth = medfilt(raw_delta, kernel_size=15)
-    delta_zeroed = delta_smooth - delta_smooth[0]
-
-    actual_lap_diff = tgt_trace['lap_time'] - ref_trace['lap_time']
-    residual = delta_zeroed[-1] - actual_lap_diff
-    if abs(residual) > 1e-6:
-        ramp = np.linspace(0, 1, len(delta_zeroed))
-        final_delta = delta_zeroed - (ramp * residual)
-    else:
-        final_delta = delta_zeroed
-
-    return ref_trace['dist'], final_delta
-
-# ==========================================
-# 3. TEAM COLOR LOOKUP
-# ==========================================
 
 COLOR_MAP = {
     'red bull': '#3671C6', 'mercedes': '#27F4D2', 'ferrari': '#FF3333',
@@ -193,48 +30,78 @@ COLOR_MAP = {
     'kick sauber': '#52E252', 'sauber': '#52E252', 'haas': '#B6BABD'
 }
 
-def hex_to_bgr(hex_str):
-    hex_str = hex_str.lstrip('#')
-    r, g, b = int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16)
+def hex_to_bgr(h):
+    h = h.lstrip('#')
+    r, g, b = int(h[0:2],16), int(h[2:4],16), int(h[4:6],16)
     return (b, g, r)
 
-def get_team_color(driver_code, year, track, DRIVERS_DB, SEASON_DB):
-    team_raw = ""
-    yr = str(year)
-    if yr in DRIVERS_DB and track in DRIVERS_DB[yr]:
-        data = DRIVERS_DB[yr][track]
-        entries = data if isinstance(data, list) else sum(data.values(), [])
-        for d in entries:
-            if d['code'] == driver_code:
-                team_raw = d.get('team_raw', '').lower()
-                break
-    if not team_raw and yr in SEASON_DB:
-        for d in SEASON_DB[yr]:
-            if d['code'] == driver_code:
-                team_raw = d.get('team_raw', '').lower()
-                break
-    for key, hex_color in COLOR_MAP.items():
-        if key in team_raw:
-            return hex_to_bgr(hex_color)
+def get_team_color(driver_code, session_obj):
+    try:
+        team_raw = session_obj.get_driver(driver_code)['TeamName'].lower()
+        for key, hex_color in COLOR_MAP.items():
+            if key in team_raw:
+                return hex_to_bgr(hex_color)
+    except:
+        pass
     try:
         return hex_to_bgr(fastf1.plotting.driver_color(driver_code))
     except:
         return (255, 255, 255)
 
-# ==========================================
-# 4. VIDEO BAKER
-# ==========================================
+def calculate_hifi_delta(ref, tgt):
+    master_len = ref['dist'].max()
+    scale = master_len / tgt['dist'].max()
+    tgt_dist_scaled = tgt['dist'] * scale
+
+    grid_len = 10000; window_size = 300; step_size = 50
+    common_grid = np.linspace(0, master_len, grid_len)
+    v_ref = np.interp(common_grid, ref['dist'], ref['speed'])
+    v_tgt = np.interp(common_grid, tgt_dist_scaled, tgt['speed'])
+
+    shifts, positions = [], []
+    for start_pos in range(0, int(master_len), step_size):
+        end_pos = start_pos + window_size
+        if end_pos > master_len: break
+        i0 = int((start_pos / master_len) * grid_len)
+        i1 = int((end_pos / master_len) * grid_len)
+        corr = correlate(v_ref[i0:i1], v_tgt[i0:i1], mode='same')
+        if len(corr) == 0: continue
+        lag_idx = np.argmax(corr) - (len(corr) // 2)
+        shift_m = lag_idx * (master_len / grid_len)
+        if abs(shift_m) < 40:
+            shifts.append(shift_m)
+            positions.append(start_pos + window_size / 2)
+
+    if positions:
+        if positions[0] > 0: positions.insert(0, 0); shifts.insert(0, shifts[0])
+        if positions[-1] < master_len: positions.append(master_len); shifts.append(shifts[-1])
+        positions, shifts = zip(*sorted(zip(positions, shifts)))
+        shift_interp = interp1d(positions, shifts, kind='linear', fill_value="extrapolate")
+        tgt_dist_warped = tgt_dist_scaled + shift_interp(tgt_dist_scaled)
+    else:
+        tgt_dist_warped = tgt_dist_scaled
+
+    f_tgt_time = interp1d(tgt_dist_warped, tgt['time'], fill_value="extrapolate")
+    raw_delta = f_tgt_time(ref['dist']) - ref['time']
+    delta_smooth = medfilt(raw_delta, kernel_size=15)
+    delta_zeroed = delta_smooth - delta_smooth[0]
+
+    actual_lap_diff = tgt['lap_time'] - ref['lap_time']
+    residual = delta_zeroed[-1] - actual_lap_diff
+    if abs(residual) > 1e-6:
+        final_delta = delta_zeroed - (np.linspace(0, 1, len(delta_zeroed)) * residual)
+    else:
+        final_delta = delta_zeroed
+
+    return ref['dist'], final_delta
 
 class F1VideoBaker:
     def __init__(self, track, configs, is_same_race, output_path,
-                 DRIVERS_DB, SEASON_DB,
                  zoom_factor=3.0, trail_frames=60, fps=30):
         self.track        = track
         self.configs      = configs
         self.is_same_race = is_same_race
         self.output_path  = output_path
-        self.DRIVERS_DB   = DRIVERS_DB
-        self.SEASON_DB    = SEASON_DB
         self.zoom_factor  = zoom_factor
         self.trail_frames = trail_frames
         self.fps          = fps
@@ -243,8 +110,6 @@ class F1VideoBaker:
         self._load_fonts()
 
     def _load_fonts(self):
-        # Colab: uses default font (no Formula1 font available in cloud)
-        # To use custom fonts: upload .ttf to Colab and set FONT_DIR env var
         font_dir = os.environ.get("FONT_DIR", "")
         try:
             self.font_title  = ImageFont.truetype(os.path.join(font_dir, "Formula1-Bold_web_0.ttf.ttf"), 42)
@@ -256,7 +121,7 @@ class F1VideoBaker:
             self.font_wm     = ImageFont.truetype(os.path.join(font_dir, "Formula1-Bold_web_0.ttf.ttf"), 24)
             print("✅ Custom fonts loaded.")
         except:
-            print("ℹ️  Formula1 fonts not found — using default. Set FONT_DIR env var to use custom fonts.")
+            print("ℹ️  Using default fonts.")
             f = ImageFont.load_default()
             self.font_title = self.font_sub = self.font_lb_pos = \
             self.font_lb_name = self.font_lb_gap = self.font_car = self.font_wm = f
@@ -265,10 +130,8 @@ class F1VideoBaker:
         key = (year, self.track, session_type)
         if key not in self.sessions:
             print(f"⏳ Loading: {year} {self.track} ({session_type})...")
-            try:
-                fastf1.Cache.enable_cache('cache')
-            except:
-                pass
+            try: fastf1.Cache.enable_cache('cache')
+            except: pass
             s = fastf1.get_session(year, self.track, session_type)
             s.load(telemetry=True, laps=True, weather=False, messages=False)
             self.sessions[key] = s
@@ -278,8 +141,7 @@ class F1VideoBaker:
         try:
             session = self._get_session(config['year'], config['session'])
             laps = session.laps.pick_driver(config['driver'])
-            if laps.empty:
-                return None
+            if laps.empty: return None
             lap = laps.pick_fastest()
             tel = lap.get_telemetry().dropna(subset=['Distance', 'Speed', 'X', 'Y'])
             tel = tel.drop_duplicates(subset=['Time'])
@@ -293,7 +155,8 @@ class F1VideoBaker:
                 'y':        tel['Y'].values / 10.0,
                 'lap_time': lap['LapTime'].total_seconds(),
                 'driver':   config['driver'],
-                'config':   config
+                'config':   config,
+                'session':  session
             }
         except Exception as e:
             print(f"⚠️  Error loading {config['driver']} ({config['year']}): {e}")
@@ -302,16 +165,14 @@ class F1VideoBaker:
     def _draw_centered(self, draw, x, y, text, font, fill):
         try:
             bbox = draw.textbbox((0, 0), text, font=font)
-            w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
         except:
             w, h = draw.textsize(text, font=font)
-        draw.text((x - w / 2, y - h / 2 - 4), text, font=font, fill=fill)
+        draw.text((x - w/2, y - h/2 - 4), text, font=font, fill=fill)
 
     def _display_name(self, config):
-        if self.is_same_race:
-            return config['driver']
-        yr = str(config['year'])[-2:]
-        return f"{config['driver']} '{yr} ({config['session']})"
+        if self.is_same_race: return config['driver']
+        return f"{config['driver']} '{str(config['year'])[-2:]} ({config['session']})"
 
     def bake(self):
         ref_trace = self._get_trace(self.ref_config)
@@ -319,25 +180,19 @@ class F1VideoBaker:
             print("❌ Reference driver trace missing. Aborting.")
             return None
 
-        # Title
         title_line1 = self.track.upper()
-        if self.is_same_race:
-            title_line1 += f" - {self.ref_config['year']}"
+        if self.is_same_race: title_line1 += f" - {self.ref_config['year']}"
         title_line2 = (
             f"TOP {len(self.configs)} - {self.ref_config['session'].upper()} LAP COMPARISON"
             if self.is_same_race else "CROSS-SESSION LAP COMPARISON"
         )
 
-        # Load all traces
-        valid_traces = []
-        time_mappings = {}
-        delta_functions = {}
+        valid_traces, time_mappings, delta_functions = [], {}, {}
 
         print("⚙️  Running HiFi Delta Engine...")
         for cfg in self.configs:
             trace = self._get_trace(cfg)
-            if not trace:
-                continue
+            if not trace: continue
             uid = f"{cfg['driver']}_{cfg['year']}_{cfg['session']}"
             trace['uid'] = uid
             valid_traces.append(trace)
@@ -349,15 +204,12 @@ class F1VideoBaker:
                 _, final_delta = calculate_hifi_delta(ref_trace, trace)
                 mapped = ref_trace['time'] + final_delta
                 time_mappings[uid] = np.maximum.accumulate(mapped)
-                delta_functions[uid] = interp1d(
-                    ref_trace['dist'], final_delta, fill_value="extrapolate"
-                )
+                delta_functions[uid] = interp1d(ref_trace['dist'], final_delta, fill_value="extrapolate")
 
         if not valid_traces:
             print("❌ No valid traces. Aborting.")
             return None
 
-        # Track spline
         print("🛤️  Building track spline...")
         rx = ref_trace['x'] - np.mean(ref_trace['x'])
         ry = ref_trace['y'] - np.mean(ref_trace['y'])
@@ -373,18 +225,22 @@ class F1VideoBaker:
         total_frames = int(max_time * self.fps)
         vec_arrays = {tr['uid']: (time_mappings[tr['uid']], ref_trace['dist']) for tr in valid_traces}
 
-        # Video setup
+        colors = {
+            tr['uid']: get_team_color(tr['config']['driver'], tr['session'])
+            for tr in valid_traces
+        }
+
         WIDTH, HEIGHT = 1080, 1920
-        os.makedirs(os.path.dirname(self.output_path) or '.', exist_ok=True)
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(self.output_path, fourcc, self.fps, (WIDTH, HEIGHT))
+        out_dir = os.path.dirname(self.output_path)
+        if out_dir: os.makedirs(out_dir, exist_ok=True)
+        out = cv2.VideoWriter(self.output_path, cv2.VideoWriter_fourcc(*'mp4v'), self.fps, (WIDTH, HEIGHT))
 
         track_w = max(p[0] for p in track_pts) - min(p[0] for p in track_pts)
         track_h = max(p[1] for p in track_pts) - min(p[1] for p in track_pts)
         scale = (min(WIDTH, HEIGHT * 0.5) / max(track_w, track_h)) * self.zoom_factor
 
         def w2s(x, y, cx, cy):
-            return int(WIDTH/2 + (x - cx) * scale), int(HEIGHT*0.4 - (y - cy) * scale)
+            return int(WIDTH/2 + (x-cx)*scale), int(HEIGHT*0.4 - (y-cy)*scale)
 
         MAP_SIZE = 280
         MAP_X = WIDTH - MAP_SIZE - 60
@@ -393,114 +249,97 @@ class F1VideoBaker:
         map_scale = MAP_SIZE / max(track_w, track_h) * 0.95
 
         def w2m(x, y):
-            return int(MAP_X + MAP_SIZE/2 + x * map_scale), int(MAP_Y + MAP_SIZE/2 - y * map_scale)
+            return int(MAP_X + MAP_SIZE/2 + x*map_scale), int(MAP_Y + MAP_SIZE/2 - y*map_scale)
 
         track_arr = np.array(track_pts)
         map_track = np.array([w2m(p[0], p[1]) for p in track_pts], np.int32)
         ref_uid = f"{self.ref_config['driver']}_{self.ref_config['year']}_{self.ref_config['session']}"
         trails = {tr['uid']: [] for tr in valid_traces}
-        car_radius = 30
 
         print(f"📼 Rendering {total_frames} frames @ {self.fps}fps...")
         for f_idx in range(total_frames):
-            if f_idx % (self.fps * 5) == 0:
-                pct = f_idx / total_frames * 100
-                print(f"   {pct:.0f}% ({f_idx}/{total_frames})")
+            if f_idx % (self.fps * 10) == 0:
+                print(f"   {f_idx/total_frames*100:.0f}% ({f_idx}/{total_frames})")
 
             t = f_idx / self.fps
             frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
 
-            cur_dists = {}
-            for tr in valid_traces:
-                t_arr, d_arr = vec_arrays[tr['uid']]
-                cur_dists[tr['uid']] = np.interp(t, t_arr, d_arr)
-
+            cur_dists = {tr['uid']: np.interp(t, vec_arrays[tr['uid']][0], vec_arrays[tr['uid']][1])
+                         for tr in valid_traces}
             ref_dist = cur_dists[ref_uid]
             cam_x, cam_y = get_pos(ref_dist / master_len)
 
-            # Track rail
             pts = np.array([w2s(p[0], p[1], cam_x, cam_y) for p in track_arr], np.int32)
-            cv2.polylines(frame, [pts.reshape(-1, 1, 2)], False, (255, 255, 255), 40, cv2.LINE_AA)
-            cv2.polylines(frame, [pts.reshape(-1, 1, 2)], False, (40, 40, 40),  32, cv2.LINE_AA)
+            cv2.polylines(frame, [pts.reshape(-1,1,2)], False, (255,255,255), 40, cv2.LINE_AA)
+            cv2.polylines(frame, [pts.reshape(-1,1,2)], False, (40,40,40),   32, cv2.LINE_AA)
 
             draw_order = sorted(valid_traces, key=lambda tr: cur_dists[tr['uid']])
 
-            # Trails
             for tr in draw_order:
                 uid = tr['uid']
                 px, py = get_pos(cur_dists[uid] / master_len)
-                color = get_team_color(tr['config']['driver'], tr['config']['year'],
-                                       self.track, self.DRIVERS_DB, self.SEASON_DB)
                 trails[uid].append((px, py))
-                if len(trails[uid]) > self.trail_frames:
-                    trails[uid].pop(0)
+                if len(trails[uid]) > self.trail_frames: trails[uid].pop(0)
                 if len(trails[uid]) > 1:
                     sc = np.array([w2s(tx, ty, cam_x, cam_y) for tx, ty in trails[uid]], np.int32)
-                    cv2.polylines(frame, [sc.reshape(-1, 1, 2)], False, color, 18, cv2.LINE_AA)
+                    cv2.polylines(frame, [sc.reshape(-1,1,2)], False, colors[uid], 18, cv2.LINE_AA)
 
-            # Minimap + cars
-            cv2.polylines(frame, [map_track.reshape(-1, 1, 2)], False, (80, 80, 80), 6, cv2.LINE_AA)
+            cv2.polylines(frame, [map_track.reshape(-1,1,2)], False, (80,80,80), 6, cv2.LINE_AA)
             for tr in draw_order:
                 uid = tr['uid']
                 px, py = get_pos(cur_dists[uid] / master_len)
                 sx, sy = w2s(px, py, cam_x, cam_y)
                 mx, my = w2m(px, py)
-                color = get_team_color(tr['config']['driver'], tr['config']['year'],
-                                       self.track, self.DRIVERS_DB, self.SEASON_DB)
-                cv2.circle(frame, (sx, sy), car_radius, color, -1, cv2.LINE_AA)
-                cv2.circle(frame, (sx, sy), car_radius, (255, 255, 255), 4, cv2.LINE_AA)
+                color = colors[uid]
+                cv2.circle(frame, (sx, sy), 30, color, -1, cv2.LINE_AA)
+                cv2.circle(frame, (sx, sy), 30, (255,255,255), 4, cv2.LINE_AA)
                 cv2.circle(frame, (mx, my), 8, color, -1, cv2.LINE_AA)
-                cv2.circle(frame, (mx, my), 8, (255, 255, 255), 2, cv2.LINE_AA)
+                cv2.circle(frame, (mx, my), 8, (255,255,255), 2, cv2.LINE_AA)
 
-            # PIL overlay
             img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             draw = ImageDraw.Draw(img)
 
-            self._draw_centered(draw, WIDTH//2, 250, title_line1, self.font_title, (255, 255, 255))
-            self._draw_centered(draw, WIDTH//2, 300, title_line2, self.font_sub, (200, 200, 200))
+            self._draw_centered(draw, WIDTH//2, 250, title_line1, self.font_title, (255,255,255))
+            self._draw_centered(draw, WIDTH//2, 300, title_line2, self.font_sub, (200,200,200))
 
             for tr in draw_order:
                 uid = tr['uid']
-                sx, sy = w2s(*get_pos(cur_dists[uid] / master_len), cam_x, cam_y)
+                sx, sy = w2s(*get_pos(cur_dists[uid]/master_len), cam_x, cam_y)
                 name = self._display_name(tr['config'])
                 try:
-                    bbox = draw.textbbox((0, 0), name, font=self.font_car)
+                    bbox = draw.textbbox((0,0), name, font=self.font_car)
                     tw, th = bbox[2]-bbox[0], bbox[3]-bbox[1]
                 except:
                     tw, th = draw.textsize(name, font=self.font_car)
                 ly = sy - 55
-                draw.rectangle([sx-tw/2-8, ly-th/2-6, sx+tw/2+8, ly+th/2+6], fill=(0, 0, 0))
-                self._draw_centered(draw, sx, ly, name, self.font_car, (255, 255, 255))
+                draw.rectangle([sx-tw/2-8, ly-th/2-6, sx+tw/2+8, ly+th/2+6], fill=(0,0,0))
+                self._draw_centered(draw, sx, ly, name, self.font_car, (255,255,255))
 
             sorted_lb = sorted(valid_traces, key=lambda tr: cur_dists[tr['uid']], reverse=True)
             for i, tr in enumerate(sorted_lb):
                 uid = tr['uid']
                 dist = cur_dists[uid]
-                c_bgr = get_team_color(tr['config']['driver'], tr['config']['year'],
-                                       self.track, self.DRIVERS_DB, self.SEASON_DB)
+                c_bgr = colors[uid]
                 c_rgb = (c_bgr[2], c_bgr[1], c_bgr[0])
                 cy_pos = lb_y_start + i * 70 + 15
 
                 if uid == ref_uid:
-                    gap_text = "LEADER"
-                    gap_color = (150, 150, 150)
+                    gap_text, gap_color = "LEADER", (150,150,150)
                 else:
                     sign = "+" if dist < ref_dist else "-"
                     time_gap = delta_functions[uid](dist)
-                    gap_text = f"{sign}{abs(dist - ref_dist):.0f}m ({sign}{abs(time_gap):.3f}s)"
-                    gap_color = (230, 50, 50) if dist < ref_dist else (50, 230, 50)
+                    gap_text = f"{sign}{abs(dist-ref_dist):.0f}m ({sign}{abs(time_gap):.3f}s)"
+                    gap_color = (230,50,50) if dist < ref_dist else (50,230,50)
 
                 draw.ellipse([62, cy_pos-18, 98, cy_pos+18], fill=c_rgb)
-                self._draw_centered(draw, 80, cy_pos, f"P{i+1}", self.font_lb_pos, (255, 255, 255))
+                self._draw_centered(draw, 80, cy_pos, f"P{i+1}", self.font_lb_pos, (255,255,255))
                 name = self._display_name(tr['config'])
-                draw.text((120, cy_pos - 18), name, font=self.font_lb_name, fill=c_rgb)
-                try:
-                    nw = draw.textbbox((0, 0), name, font=self.font_lb_name)[2]
-                except:
-                    nw = draw.textsize(name, font=self.font_lb_name)[0]
-                draw.text((120 + nw + 35, cy_pos - 14), gap_text, font=self.font_lb_gap, fill=gap_color)
+                draw.text((120, cy_pos-18), name, font=self.font_lb_name, fill=c_rgb)
+                try: nw = draw.textbbox((0,0), name, font=self.font_lb_name)[2]
+                except: nw = draw.textsize(name, font=self.font_lb_name)[0]
+                draw.text((120+nw+35, cy_pos-14), gap_text, font=self.font_lb_gap, fill=gap_color)
 
-            self._draw_centered(draw, WIDTH//2, 1850, "@formulytics", self.font_wm, (150, 150, 150))
+            self._draw_centered(draw, WIDTH//2, 1850, "@formulytics", self.font_wm, (150,150,150))
             out.write(cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR))
 
         out.release()
@@ -508,56 +347,36 @@ class F1VideoBaker:
         print(f"✅ Done: {self.output_path} ({size_mb:.1f} MB) | {total_frames} frames @ {self.fps}fps")
         return self.output_path
 
-
-# ==========================================
-# 5. ENTRY POINT
-# ==========================================
-
 def main():
-    parser = argparse.ArgumentParser(description='F1 Formulytics Cloud Renderer')
-    parser.add_argument('--config', required=True, help='Path to config.json')
-    parser.add_argument('--job',    type=int, default=None,
-                        help='Index of job to run (default: run all jobs)')
-    parser.add_argument('--output-dir', default='output',
-                        help='Directory for output MP4s (default: output/)')
-    parser.add_argument('--db-dir', default='database',
-                        help='Path to database folder (default: database/)')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config',     required=True)
+    parser.add_argument('--output-dir', default='output')
     args = parser.parse_args()
 
-    config     = load_json(args.config)
-    CALENDAR_DB, DRIVERS_DB, SEASON_DB = load_databases(args.db_dir)
+    with open(args.config) as f:
+        config = json.load(f)
 
-    jobs = config.get("jobs", [config])  # support single job or jobs array
-    if args.job is not None:
-        jobs = [jobs[args.job]]
-
+    jobs = config.get("jobs", [config])
     os.makedirs(args.output_dir, exist_ok=True)
 
     for i, job in enumerate(jobs):
         print(f"\n{'='*50}")
-        print(f"🏎️  Job {i+1}/{len(jobs)}: {job.get('mode','explicit')} — {job.get('track','?')}")
+        print(f"🏎️  Job {i+1}/{len(jobs)}: {job['track']}")
         print(f"{'='*50}")
 
-        track, configs, is_same_race, output_override = resolve_job(
-            job, CALENDAR_DB, DRIVERS_DB, SEASON_DB
-        )
+        is_same_race = "configs" not in job
+        configs = ([{"driver": d, "year": job["year"], "session": job["session"]}
+                    for d in job["drivers"]] if is_same_race else job["configs"])
 
-        if output_override:
-            out_path = os.path.join(args.output_dir, output_override)
-        else:
-            drivers_str = "_".join(c['driver'] for c in configs)
-            yr = configs[0]['year']
-            sess = configs[0]['session']
-            safe_track = track.replace(' ', '_').lower()
-            out_path = os.path.join(args.output_dir, f"{safe_track}_{yr}_{sess}_{drivers_str}.mp4")
+        track = job["track"]
+        drivers_str = "_".join(c['driver'] for c in configs)
+        safe_track = track.replace(' ', '_').lower()
+        out_path = job.get("output", os.path.join(args.output_dir,
+                           f"{safe_track}_{configs[0]['year']}_{configs[0]['session']}_{drivers_str}.mp4"))
 
         baker = F1VideoBaker(
-            track=track,
-            configs=configs,
-            is_same_race=is_same_race,
+            track=track, configs=configs, is_same_race=is_same_race,
             output_path=out_path,
-            DRIVERS_DB=DRIVERS_DB,
-            SEASON_DB=SEASON_DB,
             zoom_factor=job.get("zoom_factor", 3.0),
             trail_frames=job.get("trail_frames", 60),
             fps=job.get("fps", 30)
