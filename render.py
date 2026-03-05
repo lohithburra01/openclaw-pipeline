@@ -110,7 +110,7 @@ class F1VideoBaker:
         self._load_fonts()
 
     def _load_fonts(self):
-        font_dir = os.environ.get("FONT_DIR", "")
+        font_dir = ""
         try:
             self.font_title  = ImageFont.truetype(os.path.join(font_dir, "Formula1-Bold_web_0.ttf.ttf"), 42)
             self.font_sub    = ImageFont.truetype(os.path.join(font_dir, "Formula1-Regular_web_0.ttf.ttf"), 26)
