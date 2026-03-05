@@ -377,7 +377,7 @@ def main():
         baker = F1VideoBaker(
             track=track, configs=configs, is_same_race=is_same_race,
             output_path=out_path,
-            zoom_factor=job.get("zoom_factor", 3.0),
+            zoom_factor=job.get("zoom_factor", 11.0),
             trail_frames=job.get("trail_frames", 60),
             fps=job.get("fps", 30)
         )
