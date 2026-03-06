@@ -29,7 +29,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-f1pipeline
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -43,7 +43,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install fastf1 opencv-python-headless pillow scipy numpy pydrive2 -q
+          pip install fastf1 opencv-python-headless pillow scipy numpy google-auth google-auth-httplib2 google-api-python-client -q
 
       - name: Write config if provided via workflow_dispatch
         if: ${{ github.event.inputs.config != '' }}
@@ -56,43 +56,43 @@ jobs:
 
       - name: Upload to Google Drive
         env:
-          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
         run: |
-          python - <<'EOF'
+          python - <<'PYEOF'
           import os
-          import json
-          from pydrive2.auth import GoogleAuth
-          from pydrive2.drive import GoogleDrive
+          from google.oauth2.credentials import Credentials
+          from google.auth.transport.requests import Request
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaFileUpload
 
-          creds = json.loads(os.environ['GDRIVE_CREDENTIALS'])
-          with open('service_account.json', 'w') as f:
-              json.dump(creds, f)
-
-          gauth = GoogleAuth()
-          gauth.settings['client_config_backend'] = 'service'
-          gauth.settings['service_config'] = {
-              'client_json_file_path': 'service_account.json',
-              'client_user_email': creds['client_email']
-          }
-          gauth.ServiceAuth()
-          drive = GoogleDrive(gauth)
+          creds = Credentials(
+              token=None,
+              refresh_token=os.environ['GDRIVE_REFRESH_TOKEN'],
+              client_id=os.environ['GDRIVE_CLIENT_ID'],
+              client_secret=os.environ['GDRIVE_CLIENT_SECRET'],
+              token_uri='https://oauth2.googleapis.com/token'
+          )
+          creds.refresh(Request())
+          drive = build('drive', 'v3', credentials=creds)
 
           folder_id = os.environ['GDRIVE_FOLDER_ID']
-          output_dir = 'output'
 
-          for fname in os.listdir(output_dir):
+          for fname in os.listdir('output'):
               if fname.endswith('.mp4'):
-                  fpath = os.path.join(output_dir, fname)
+                  fpath = os.path.join('output', fname)
                   print(f"Uploading {fname}...")
-                  f = drive.CreateFile({
-                      'title': fname,
-                      'parents': [{'id': folder_id}]
-                  })
-                  f.SetContentFile(fpath)
-                  f.Upload()
-                  print(f"✅ Uploaded: {fname}")
-          EOF
+                  metadata = {'name': fname, 'parents': [folder_id]}
+                  media = MediaFileUpload(fpath, mimetype='video/mp4', resumable=True)
+                  result = drive.files().create(
+                      body=metadata,
+                      media_body=media,
+                      fields='id,name'
+                  ).execute()
+                  print(f"✅ Uploaded: {fname} (id: {result['id']})")
+          PYEOF
 
       - name: Upload artifact (backup)
         uses: actions/upload-artifact@v4
