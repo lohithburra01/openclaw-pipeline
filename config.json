@@ -7,7 +7,7 @@
       "session": "Q",
       "drivers": ["VER", "NOR", "LEC"],
       "fps": 30,
-      "zoom_factor": 3.0,
+      "zoom_factor": 11.0,
       "trail_frames": 60
     }
   ]
