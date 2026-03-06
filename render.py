@@ -129,8 +129,16 @@ class F1VideoBaker:
     def get_team_colors(self, driver_code, year):
         team_raw = ""
         if str(year) in DRIVERS_DB and self.track in DRIVERS_DB[str(year)]:
-            for d in DRIVERS_DB[str(year)][self.track]:
-                if d['code'] == driver_code:
+            race_data = DRIVERS_DB[str(year)][self.track]
+            entries = []
+            if isinstance(race_data, dict):
+                for v in race_data.values():
+                    if isinstance(v, list):
+                        entries.extend(v)
+            elif isinstance(race_data, list):
+                entries = race_data
+            for d in entries:
+                if isinstance(d, dict) and d.get('code') == driver_code:
                     team_raw = d.get('team_raw', '').lower()
                     break
         if not team_raw and str(year) in SEASON_DB:
