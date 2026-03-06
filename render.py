@@ -425,8 +425,8 @@ if __name__ == "__main__":
             track=track,
             configs=configs,
             is_same_race=is_same_race,
-            zoom_factor=job.get("zoom_factor", 15.0),
+            zoom_factor=job.get("zoom_factor", 3.0),
             trail_frames=job.get("trail_frames", 60),
-            fps=job.get("fps", 30)
+            fps=int(job.get("fps", 30) * job.get("speed_multiplier", 1.0))
         )
         baker.bake(output_path=out_path)

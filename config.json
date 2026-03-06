@@ -8,7 +8,8 @@
       "drivers": ["VER", "NOR", "LEC"],
       "fps": 60,
       "zoom_factor": 17.0,
-      "trail_frames": 60
+      "trail_frames": 60,
+      "speed_multiplier": 1.5
     }
   ]
 }
