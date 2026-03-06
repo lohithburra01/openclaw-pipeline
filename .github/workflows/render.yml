@@ -1,0 +1,102 @@
+name: F1 Render Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      config:
+        description: 'JSON job config (paste entire config.json contents)'
+        required: false
+        default: ''
+  push:
+    paths:
+      - 'config.json'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Cache FastF1
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/fastf1
+          key: ${{ runner.os }}-fastf1-${{ hashFiles('config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-fastf1-
+
+      - name: Install dependencies
+        run: |
+          pip install fastf1 opencv-python-headless pillow scipy numpy pydrive2 -q
+
+      - name: Write config if provided via workflow_dispatch
+        if: ${{ github.event.inputs.config != '' }}
+        run: |
+          echo '${{ github.event.inputs.config }}' > config.json
+
+      - name: Render video
+        run: |
+          python render.py --config config.json --output-dir output
+
+      - name: Upload to Google Drive
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          python - <<'EOF'
+          import os
+          import json
+          from pydrive2.auth import GoogleAuth
+          from pydrive2.drive import GoogleDrive
+
+          creds = json.loads(os.environ['GDRIVE_CREDENTIALS'])
+          with open('service_account.json', 'w') as f:
+              json.dump(creds, f)
+
+          gauth = GoogleAuth()
+          gauth.settings['client_config_backend'] = 'service'
+          gauth.settings['service_config'] = {
+              'client_json_file_path': 'service_account.json',
+              'client_user_email': creds['client_email']
+          }
+          gauth.ServiceAuth()
+          drive = GoogleDrive(gauth)
+
+          folder_id = os.environ['GDRIVE_FOLDER_ID']
+          output_dir = 'output'
+
+          for fname in os.listdir(output_dir):
+              if fname.endswith('.mp4'):
+                  fpath = os.path.join(output_dir, fname)
+                  print(f"Uploading {fname}...")
+                  f = drive.CreateFile({
+                      'title': fname,
+                      'parents': [{'id': folder_id}]
+                  })
+                  f.SetContentFile(fpath)
+                  f.Upload()
+                  print(f"✅ Uploaded: {fname}")
+          EOF
+
+      - name: Upload artifact (backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: f1-video
+          path: output/*.mp4
+          retention-days: 3
