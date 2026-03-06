@@ -425,7 +425,7 @@ if __name__ == "__main__":
             track=track,
             configs=configs,
             is_same_race=is_same_race,
-            zoom_factor=job.get("zoom_factor", 11.0),
+            zoom_factor=job.get("zoom_factor", 15.0),
             trail_frames=job.get("trail_frames", 60),
             fps=job.get("fps", 30)
         )
