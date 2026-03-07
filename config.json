@@ -2,10 +2,10 @@
   "jobs": [
     {
       "mode": "explicit",
-      "track": "Bahrain Grand Prix",
-      "year": 2024,
-      "session": "Q",
-      "drivers": ["VER", "NOR", "LEC"],
+      "track": "AUSTRALIA",
+      "year": 2026,
+      "session": "FP3",
+      "drivers": ["RUS", "HAM", "LEC"],
       "fps": 60,
       "zoom_factor": 17.0,
       "trail_frames": 60,
