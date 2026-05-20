@@ -440,3 +440,40 @@ def session_has_data(year, event_name, kind):
     except Exception as exc:
         print(f"  data-readiness check failed: {exc}")
         return False
+
+
+def get_drive_service():
+    """Authenticated Google Drive v3 client, using the GDRIVE_* env vars."""
+    from google.oauth2.credentials import Credentials
+    from google.auth.transport.requests import Request
+    from googleapiclient.discovery import build
+
+    creds = Credentials(
+        token=None,
+        refresh_token=os.environ["GDRIVE_REFRESH_TOKEN"],
+        client_id=os.environ["GDRIVE_CLIENT_ID"],
+        client_secret=os.environ["GDRIVE_CLIENT_SECRET"],
+        token_uri="https://oauth2.googleapis.com/token",
+    )
+    creds.refresh(Request())
+    return build("drive", "v3", credentials=creds)
+
+
+def drive_has_file(service, folder_id, filename):
+    """True if a non-trashed file named `filename` exists in the folder."""
+    safe = filename.replace("\\", "\\\\").replace("'", "\\'")
+    query = f"name = '{safe}' and '{folder_id}' in parents and trashed = false"
+    resp = service.files().list(q=query, fields="files(id,name)").execute()
+    return len(resp.get("files", [])) > 0
+
+
+def drive_upload_file(service, folder_id, path):
+    """Upload a local file into the Drive folder; return the new file id."""
+    from googleapiclient.http import MediaFileUpload
+
+    metadata = {"name": os.path.basename(path), "parents": [folder_id]}
+    media = MediaFileUpload(path, mimetype="video/mp4", resumable=True)
+    result = service.files().create(
+        body=metadata, media_body=media, fields="id,name"
+    ).execute()
+    return result["id"]
