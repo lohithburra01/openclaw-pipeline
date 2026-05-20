@@ -420,6 +420,8 @@ def rewrite_cron_block(workflow_text, cron_lines):
         )
     begin = workflow_text.index(CRON_BEGIN)
     end = workflow_text.index(CRON_END)
+    if begin >= end:
+        raise RuntimeError("Workflow cron markers are out of order")
     head = workflow_text[:begin + len(CRON_BEGIN)]
     tail = workflow_text[end:]
     block = "".join(f'\n    - cron: "{c}"' for c in cron_lines)
@@ -432,14 +434,22 @@ def load_event_schedule(season):
 
 
 def session_has_data(year, event_name, kind):
-    """True once FastF1 has lap data for the session, False if not ready yet."""
+    """True once FastF1 has lap data for the session.
+
+    Returns False (so a later cron slot retries) both when the session is not
+    loadable yet and when it loads but has no laps. The exception text is
+    printed so a genuine, persistent failure is still visible in the logs.
+    """
     try:
         session = fastf1.get_session(year, event_name, kind)
         session.load(laps=True, telemetry=False, weather=False, messages=False)
-        return len(session.laps) > 0
     except Exception as exc:
-        print(f"  data-readiness check failed: {exc}")
+        print(f"  session not loadable yet ({event_name} {kind}): {exc}")
         return False
+    if len(session.laps) == 0:
+        print(f"  session loaded but has no laps yet ({event_name} {kind})")
+        return False
+    return True
 
 
 def get_drive_service():
@@ -493,6 +503,7 @@ def commit_and_push(path, message):
     )
     subprocess.run(["git", "add", path], check=True)
     subprocess.run(["git", "commit", "-m", message], check=True)
+    subprocess.run(["git", "pull", "--rebase"], check=True)
     subprocess.run(["git", "push"], check=True)
     print(f"  committed and pushed {path}")
 
@@ -500,7 +511,14 @@ def commit_and_push(path, message):
 def parse_force_session(text):
     """'2026 Miami R' -> (2026, 'Miami', 'R'). Event name may contain spaces."""
     parts = text.split()
-    return int(parts[0]), " ".join(parts[1:-1]), parts[-1].upper()
+    if len(parts) < 3:
+        raise SystemExit(
+            '--force-session must be "YEAR EVENT KIND", e.g. "2026 Miami R"'
+        )
+    year, event, kind = int(parts[0]), " ".join(parts[1:-1]), parts[-1].upper()
+    if kind not in ("R", "S"):
+        raise SystemExit(f'--force-session kind must be R or S, got "{kind}"')
+    return year, event, kind
 
 
 def reschedule(now, dry_run=False):
@@ -545,6 +563,10 @@ def render_due(now):
         if drive_has_file(service, folder, slug):
             print(f"  ALREADY_RENDERED ({slug})")
             continue
+        # session_has_data loads the session as a readiness gate;
+        # create_race_timelapse loads it again to render. The second load is
+        # cheap thanks to the FastF1 cache. Keep both: the readiness gate must
+        # remain even if the render path changes.
         if not session_has_data(SEASON, s["event"], s["kind"]):
             print(f"  DATA_NOT_READY ({s['event']} {s['kind']})")
             continue

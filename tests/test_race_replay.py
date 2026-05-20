@@ -148,6 +148,25 @@ def test_rewrite_cron_block_missing_markers_raises():
         rr.rewrite_cron_block("no markers here", ["1 2 3 4 *"])
 
 
+def test_rewrite_cron_block_reversed_markers_raises():
+    import pytest
+    workflow = (
+        "on:\n  schedule:\n"
+        "    " + rr.CRON_END + "\n"
+        "    " + rr.CRON_BEGIN + "\n"
+    )
+    with pytest.raises(RuntimeError):
+        rr.rewrite_cron_block(workflow, ["1 2 3 4 *"])
+
+
 def test_parse_force_session():
     assert rr.parse_force_session("2026 Miami R") == (2026, "Miami", "R")
     assert rr.parse_force_session("2026 Canadian Grand Prix S") == (2026, "Canadian Grand Prix", "S")
+
+
+def test_parse_force_session_rejects_bad_input():
+    import pytest
+    with pytest.raises(SystemExit):
+        rr.parse_force_session("2026 R")
+    with pytest.raises(SystemExit):
+        rr.parse_force_session("2026 Miami X")
