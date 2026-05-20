@@ -424,3 +424,19 @@ def rewrite_cron_block(workflow_text, cron_lines):
     tail = workflow_text[end:]
     block = "".join(f'\n    - cron: "{c}"' for c in cron_lines)
     return f"{head}{block}\n    {tail}"
+
+
+def load_event_schedule(season):
+    """Return the FastF1 event-schedule DataFrame for a season."""
+    return fastf1.get_event_schedule(season, include_testing=False)
+
+
+def session_has_data(year, event_name, kind):
+    """True once FastF1 has lap data for the session, False if not ready yet."""
+    try:
+        session = fastf1.get_session(year, event_name, kind)
+        session.load(laps=True, telemetry=False, weather=False, messages=False)
+        return len(session.laps) > 0
+    except Exception as exc:
+        print(f"  data-readiness check failed: {exc}")
+        return False
