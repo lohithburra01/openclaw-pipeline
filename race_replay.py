@@ -399,3 +399,28 @@ def due_sessions(sessions, now):
         if s["end"] <= now <= s["end"] + timedelta(hours=RENDER_LOOKBACK_HOURS):
             out.append(s)
     return out
+
+
+def build_cron_lines(sessions, now):
+    """Sorted, de-duplicated cron strings: the weekly safety tick plus a retry
+    slot for every schedulable session."""
+    lines = {WEEKLY_SAFETY_CRON}
+    for s in schedulable_sessions(sessions, now):
+        for slot in retry_slots(s["end"]):
+            lines.add(cron_for_datetime(slot))
+    return sorted(lines)
+
+
+def rewrite_cron_block(workflow_text, cron_lines):
+    """Return workflow_text with the region between CRON_BEGIN and CRON_END
+    replaced by `cron_lines`. The marker comment lines themselves are kept."""
+    if CRON_BEGIN not in workflow_text or CRON_END not in workflow_text:
+        raise RuntimeError(
+            f"Workflow file is missing the cron markers {CRON_BEGIN!r}/{CRON_END!r}"
+        )
+    begin = workflow_text.index(CRON_BEGIN)
+    end = workflow_text.index(CRON_END)
+    head = workflow_text[:begin + len(CRON_BEGIN)]
+    tail = workflow_text[end:]
+    block = "".join(f'\n    - cron: "{c}"' for c in cron_lines)
+    return f"{head}{block}\n    {tail}"

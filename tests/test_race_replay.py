@@ -105,3 +105,44 @@ def test_due_sessions_excludes_not_yet_ended():
 def test_due_sessions_excludes_stale():
     s = _session(datetime(2026, 5, 24, 20, 0), datetime(2026, 5, 24, 22, 15))
     assert rr.due_sessions([s], datetime(2026, 5, 25, 6, 0)) == []
+
+
+def test_build_cron_lines_always_includes_safety():
+    lines = rr.build_cron_lines([], datetime(2026, 5, 20, 12, 0))
+    assert lines == [rr.WEEKLY_SAFETY_CRON]
+
+
+def test_build_cron_lines_adds_session_slots():
+    now = datetime(2026, 5, 20, 12, 0)
+    s = _session(datetime(2026, 5, 24, 20, 0), datetime(2026, 5, 24, 22, 15))
+    lines = rr.build_cron_lines([s], now)
+    assert "30 22 24 5 *" in lines        # end + 15 min
+    assert rr.WEEKLY_SAFETY_CRON in lines
+    assert len(lines) == 6                # safety + 5 retry slots
+
+
+def test_rewrite_cron_block_replaces_only_managed_region():
+    workflow = (
+        "name: F1 Race Replay\n"
+        "on:\n"
+        "  schedule:\n"
+        "    " + rr.CRON_BEGIN + "\n"
+        "    - cron: \"0 12 * * 3\"\n"
+        "    " + rr.CRON_END + "\n"
+        "jobs:\n"
+        "  render:\n"
+    )
+    out = rr.rewrite_cron_block(workflow, ["1 2 3 4 *", "5 6 7 8 *"])
+    assert "- cron: \"1 2 3 4 *\"" in out
+    assert "- cron: \"5 6 7 8 *\"" in out
+    assert "0 12 * * 3" not in out
+    assert out.count(rr.CRON_BEGIN) == 1
+    assert out.count(rr.CRON_END) == 1
+    assert out.startswith("name: F1 Race Replay\n")
+    assert out.endswith("jobs:\n  render:\n")
+
+
+def test_rewrite_cron_block_missing_markers_raises():
+    import pytest
+    with pytest.raises(RuntimeError):
+        rr.rewrite_cron_block("no markers here", ["1 2 3 4 *"])
