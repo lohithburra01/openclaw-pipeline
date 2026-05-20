@@ -477,3 +477,21 @@ def drive_upload_file(service, folder_id, path):
         body=metadata, media_body=media, fields="id,name"
     ).execute()
     return result["id"]
+
+
+def commit_and_push(path, message):
+    """Commit a single file and push. Only acts inside GitHub Actions; on a
+    local machine it prints what it would do and returns."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        print(f"  (local run) would commit and push {path}")
+        return
+    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+    subprocess.run(
+        ["git", "config", "user.email",
+         "41898282+github-actions[bot]@users.noreply.github.com"],
+        check=True,
+    )
+    subprocess.run(["git", "add", path], check=True)
+    subprocess.run(["git", "commit", "-m", message], check=True)
+    subprocess.run(["git", "push"], check=True)
+    print(f"  committed and pushed {path}")
