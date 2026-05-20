@@ -350,3 +350,30 @@ def output_slug(event_name, year, kind):
     """Stable output filename, e.g. 'canadian_grand_prix_2026_R.mp4'."""
     base = re.sub(r"[^a-z0-9]+", "_", event_name.lower()).strip("_")
     return f"{base}_{year}_{kind}.mp4"
+
+
+def list_sessions(schedule_df):
+    """FastF1 event-schedule DataFrame -> list of race/sprint session dicts.
+
+    Matches the session names 'Race' and 'Sprint' exactly, so 'Sprint
+    Qualifying' / 'Sprint Shootout' are ignored.
+    """
+    sessions = []
+    for _, ev in schedule_df.iterrows():
+        for i in range(1, 6):
+            name = ev.get(f"Session{i}")
+            date = ev.get(f"Session{i}DateUtc")
+            if name not in ("Race", "Sprint"):
+                continue
+            if date is None or pd.isna(date):
+                continue
+            kind = "S" if name == "Sprint" else "R"
+            start = pd.Timestamp(date).to_pydatetime()
+            sessions.append({
+                "event": ev["EventName"],
+                "round": int(ev["RoundNumber"]),
+                "kind": kind,
+                "start": start,
+                "end": session_end_time(start, kind),
+            })
+    return sessions
