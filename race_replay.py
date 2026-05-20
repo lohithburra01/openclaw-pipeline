@@ -377,3 +377,25 @@ def list_sessions(schedule_df):
                 "end": session_end_time(start, kind),
             })
     return sessions
+
+
+def schedulable_sessions(sessions, now):
+    """Sessions worth writing cron slots for: their last retry slot is still
+    in the future, and they start within the lookahead horizon."""
+    last_offset = max(RETRY_OFFSETS_MIN)
+    horizon = now + timedelta(days=LOOKAHEAD_DAYS)
+    out = []
+    for s in sessions:
+        last_slot = s["end"] + timedelta(minutes=last_offset)
+        if last_slot > now and s["start"] < horizon:
+            out.append(s)
+    return out
+
+
+def due_sessions(sessions, now):
+    """Sessions that have ended and are still inside the render window."""
+    out = []
+    for s in sessions:
+        if s["end"] <= now <= s["end"] + timedelta(hours=RENDER_LOOKBACK_HOURS):
+            out.append(s)
+    return out

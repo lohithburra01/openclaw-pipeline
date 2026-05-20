@@ -61,3 +61,47 @@ def test_list_sessions_computes_fields():
     assert race["round"] == 9
     assert race["start"] == datetime(2026, 7, 5, 14, 0)
     assert race["end"] == datetime(2026, 7, 5, 16, 15)
+
+
+def _session(start, end):
+    return {"event": "X", "round": 1, "kind": "R", "start": start, "end": end}
+
+
+def test_schedulable_includes_upcoming_within_lookahead():
+    now = datetime(2026, 5, 20, 12, 0)
+    s = _session(datetime(2026, 5, 24, 20, 0), datetime(2026, 5, 24, 22, 15))
+    assert rr.schedulable_sessions([s], now) == [s]
+
+
+def test_schedulable_excludes_beyond_lookahead():
+    now = datetime(2026, 5, 20, 12, 0)
+    s = _session(datetime(2026, 7, 1, 13, 0), datetime(2026, 7, 1, 15, 15))
+    assert rr.schedulable_sessions([s], now) == []
+
+
+def test_schedulable_excludes_passed_retry_window():
+    now = datetime(2026, 5, 20, 12, 0)
+    s = _session(datetime(2026, 5, 3, 17, 0), datetime(2026, 5, 3, 19, 15))
+    assert rr.schedulable_sessions([s], now) == []
+
+
+def test_schedulable_keeps_just_ended_session_with_slots_left():
+    # session ended 30 min ago; later retry slots are still in the future
+    now = datetime(2026, 5, 23, 17, 45)
+    s = _session(datetime(2026, 5, 23, 16, 0), datetime(2026, 5, 23, 17, 15))
+    assert rr.schedulable_sessions([s], now) == [s]
+
+
+def test_due_sessions_within_lookback():
+    s = _session(datetime(2026, 5, 24, 20, 0), datetime(2026, 5, 24, 22, 15))
+    assert rr.due_sessions([s], datetime(2026, 5, 24, 23, 0)) == [s]
+
+
+def test_due_sessions_excludes_not_yet_ended():
+    s = _session(datetime(2026, 5, 24, 20, 0), datetime(2026, 5, 24, 22, 15))
+    assert rr.due_sessions([s], datetime(2026, 5, 24, 21, 0)) == []
+
+
+def test_due_sessions_excludes_stale():
+    s = _session(datetime(2026, 5, 24, 20, 0), datetime(2026, 5, 24, 22, 15))
+    assert rr.due_sessions([s], datetime(2026, 5, 25, 6, 0)) == []
