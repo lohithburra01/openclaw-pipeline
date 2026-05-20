@@ -325,3 +325,28 @@ def create_race_timelapse(year=2026, gp='Bahrain', session_type='R',
 # ============================================================
 # SCHEDULING & ORCHESTRATION
 # ============================================================
+def session_label_for(kind):
+    """kind is 'R' or 'S'; returns the on-screen title label."""
+    return "SPRINT" if kind == "S" else "RACE"
+
+
+def session_end_time(start, kind):
+    """Estimated wall-clock end of a session, given its start datetime."""
+    buffer = SPRINT_END_BUFFER_MIN if kind == "S" else RACE_END_BUFFER_MIN
+    return start + timedelta(minutes=buffer)
+
+
+def retry_slots(end_time):
+    """Datetimes at which the workflow should retry rendering this session."""
+    return [end_time + timedelta(minutes=off) for off in RETRY_OFFSETS_MIN]
+
+
+def cron_for_datetime(dt):
+    """One UTC datetime -> a GitHub Actions 5-field cron string."""
+    return f"{dt.minute} {dt.hour} {dt.day} {dt.month} *"
+
+
+def output_slug(event_name, year, kind):
+    """Stable output filename, e.g. 'canadian_grand_prix_2026_R.mp4'."""
+    base = re.sub(r"[^a-z0-9]+", "_", event_name.lower()).strip("_")
+    return f"{base}_{year}_{kind}.mp4"
