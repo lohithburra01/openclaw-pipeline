@@ -1,0 +1,4 @@
+output/
+.fastf1_cache/
+__pycache__/
+.pytest_cache/
