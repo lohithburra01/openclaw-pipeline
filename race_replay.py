@@ -495,3 +495,97 @@ def commit_and_push(path, message):
     subprocess.run(["git", "commit", "-m", message], check=True)
     subprocess.run(["git", "push"], check=True)
     print(f"  committed and pushed {path}")
+
+
+def parse_force_session(text):
+    """'2026 Miami R' -> (2026, 'Miami', 'R'). Event name may contain spaces."""
+    parts = text.split()
+    return int(parts[0]), " ".join(parts[1:-1]), parts[-1].upper()
+
+
+def reschedule(now, dry_run=False):
+    """Phase 1: rewrite the workflow's cron block from the F1 calendar."""
+    sessions = list_sessions(load_event_schedule(SEASON))
+    cron_lines = build_cron_lines(sessions, now)
+    print("Cron block to apply:")
+    for c in cron_lines:
+        print(f'  - cron: "{c}"')
+
+    with open(WORKFLOW_PATH, encoding="utf-8") as f:
+        current = f.read()
+    updated = rewrite_cron_block(current, cron_lines)
+
+    if updated == current:
+        print("Schedule unchanged.")
+        return
+    if dry_run:
+        print("(dry-run) workflow file not modified.")
+        return
+    with open(WORKFLOW_PATH, "w", encoding="utf-8", newline="\n") as f:
+        f.write(updated)
+    commit_and_push(WORKFLOW_PATH, "chore: update race-replay cron schedule")
+    print("Schedule updated.")
+
+
+def render_due(now):
+    """Phase 2: render any just-ended session not already in Google Drive."""
+    sessions = list_sessions(load_event_schedule(SEASON))
+    candidates = due_sessions(sessions, now)
+    if not candidates:
+        print("NO_SESSION")
+        return
+
+    service = get_drive_service()
+    folder = os.environ["GDRIVE_FOLDER_ID"]
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    for s in candidates:
+        slug = output_slug(s["event"], SEASON, s["kind"])
+        print(f"Candidate: {s['event']} ({s['kind']}) -> {slug}")
+        if drive_has_file(service, folder, slug):
+            print(f"  ALREADY_RENDERED ({slug})")
+            continue
+        if not session_has_data(SEASON, s["event"], s["kind"]):
+            print(f"  DATA_NOT_READY ({s['event']} {s['kind']})")
+            continue
+        out_path = os.path.join(OUTPUT_DIR, slug)
+        create_race_timelapse(
+            year=SEASON, gp=s["event"], session_type=s["kind"],
+            save_path=out_path, duration=DURATION_SECONDS, fps=FPS,
+            portrait=PORTRAIT, session_label=session_label_for(s["kind"]),
+        )
+        file_id = drive_upload_file(service, folder, out_path)
+        print(f"  UPLOADED ({slug}, drive id {file_id})")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="F1 race-replay pipeline")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="print the cron block without writing or committing")
+    parser.add_argument("--force-session", metavar="SPEC",
+                        help='render one session locally, e.g. "2026 Miami R"')
+    parser.add_argument("--duration", type=int, default=DURATION_SECONDS,
+                        help="override video length in seconds (for testing)")
+    args = parser.parse_args()
+
+    if args.force_session:
+        year, event, kind = parse_force_session(args.force_session)
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        out_path = os.path.join(OUTPUT_DIR, output_slug(event, year, kind))
+        create_race_timelapse(
+            year=year, gp=event, session_type=kind, save_path=out_path,
+            duration=args.duration, fps=FPS, portrait=PORTRAIT,
+            session_label=session_label_for(kind),
+        )
+        print(f"Rendered {out_path}")
+        return
+
+    now = datetime.utcnow()
+    print(f"=== race_replay.py @ {now} UTC (season {SEASON}) ===")
+    reschedule(now, dry_run=args.dry_run)
+    if not args.dry_run:
+        render_due(now)
+
+
+if __name__ == "__main__":
+    main()
