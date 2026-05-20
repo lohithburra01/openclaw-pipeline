@@ -1,0 +1,64 @@
+name: F1 Race Replay
+
+on:
+  workflow_dispatch:
+  schedule:
+    # === BEGIN AUTO-MANAGED CRON (edited by race_replay.py) ===
+    - cron: "0 12 * * 3"
+    # === END AUTO-MANAGED CRON ===
+
+permissions:
+  contents: write
+
+concurrency:
+  group: race-replay
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.WORKFLOW_PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-racereplay
+
+      - name: Cache FastF1
+        uses: actions/cache@v4
+        with:
+          path: .fastf1_cache
+          key: ${{ runner.os }}-fastf1-racereplay
+
+      - name: Install dependencies
+        run: |
+          pip install -q fastf1 opencv-python-headless pillow numpy pandas \
+            google-auth google-auth-httplib2 google-api-python-client
+
+      - name: Run race replay pipeline
+        env:
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: python race_replay.py
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: race-replay-video
+          path: output/*.mp4
+          retention-days: 5
+          if-no-files-found: ignore
