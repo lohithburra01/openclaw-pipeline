@@ -54,15 +54,9 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-racereplay
 
-      - name: Cache FastF1
-        uses: actions/cache@v4
-        with:
-          path: .fastf1_cache
-          key: ${{ runner.os }}-fastf1-racereplay
-
       - name: Install dependencies
         run: |
-          pip install -q fastf1 opencv-python-headless pillow numpy pandas \
+          pip install -q opencv-python-headless pillow numpy \
             google-auth google-auth-httplib2 google-api-python-client
 
       - name: Run race replay pipeline

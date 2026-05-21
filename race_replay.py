@@ -1,18 +1,18 @@
-import fastf1
 import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
-import pandas as pd
 import os
 
 # ============================================================
 # RACE REPLAY PIPELINE - configuration
 # ============================================================
 import argparse
+import json
 import re
 import subprocess
 import sys
-from datetime import datetime, timedelta
+import urllib.request
+from datetime import datetime, timedelta, timezone
 
 SEASON = int(os.environ.get("RACE_SEASON", datetime.utcnow().year))
 RACE_END_BUFFER_MIN = 135       # race counted as "ended" 2h15m after start
@@ -27,11 +27,8 @@ PORTRAIT = True
 WORKFLOW_PATH = os.path.join(".github", "workflows", "race_replay.yml")
 CRON_BEGIN = "# === BEGIN AUTO-MANAGED CRON (edited by race_replay.py) ==="
 CRON_END = "# === END AUTO-MANAGED CRON ==="
-CACHE_DIR = ".fastf1_cache"
 OUTPUT_DIR = "output"
-
-os.makedirs(CACHE_DIR, exist_ok=True)
-fastf1.Cache.enable_cache(CACHE_DIR)
+OPENF1_BASE = "https://api.openf1.org/v1"
 
 # --- CORE CONFIGURATION ---
 GLOBAL_SCALE = 0.90         
@@ -91,52 +88,12 @@ def load_fonts(base_size):
     gap_font = ImageFont.truetype(reg, int(base_size * 0.75))
     return title_font, axis_font, label_font, tire_font, gap_font
 
-def create_race_timelapse(year=2026, gp='Bahrain', session_type='R',
+def create_race_timelapse(session_key, gp='Bahrain', year=2026,
                           save_path='output.mp4', duration=30, fps=60, portrait=True,
                           session_label='RACE'):
-    
-    print(f"Loading pure time data for {year} {gp} Session: {session_type}...")
-    session = fastf1.get_session(year, gp, session_type)
-    session.load(laps=True, telemetry=False)
-    
-    laps_data = session.laps
-    drivers = pd.unique(laps_data['Driver'])
-    total_laps = int(laps_data['LapNumber'].max())
-    total_drivers = len(drivers) 
-    
-    d_data = {}
-    global_start_time = float('inf')
-    global_end_time = 0.0
-    
-    for drv in drivers:
-        drv_laps = laps_data.pick_driver(drv).dropna(subset=['LapNumber', 'Position', 'Time', 'LapStartTime'])
-        if drv_laps.empty: continue
-            
-        lap_ends = drv_laps['Time'].dt.total_seconds().values
-        lap_starts = drv_laps['LapStartTime'].dt.total_seconds().values
-        
-        start_time = lap_starts[0]
-        times = np.insert(lap_ends, 0, start_time)
-        laps = np.insert(drv_laps['LapNumber'].values, 0, 0)
-        pos = np.insert(drv_laps['Position'].values, 0, drv_laps['Position'].values[0])
-        compounds = np.insert(drv_laps['Compound'].values, 0, drv_laps['Compound'].values[0])
-        
-        global_start_time = min(global_start_time, start_time)
-        global_end_time = max(global_end_time, lap_ends[-1])
-        
-        # DYNAMICALLY QUERY CONSTRUCTOR AND MAP TO LIBRARY
-        try:
-            drv_info = session.results[session.results['Abbreviation'] == drv].iloc[0]
-            team_name = drv_info['TeamName']
-            drv_color = get_constructor_color(team_name)
-        except Exception:
-            drv_color = '#888888'
-        
-        d_data[drv] = {
-            'laps': laps, 'pos': pos, 'times': times, 'compounds': compounds,
-            'color': drv_color,
-            'max_time': lap_ends[-1]
-        }
+
+    print(f"Loading OpenF1 data for {gp} {year} (session {session_key})...")
+    d_data, total_laps, total_drivers, global_start_time, global_end_time = load_openf1_race(session_key)
 
     canvas_w, canvas_h = (1080, 1920) if portrait else (1920, 1080)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -352,30 +309,137 @@ def output_slug(event_name, year, kind):
     return f"{base}_{year}_{kind}.mp4"
 
 
-def list_sessions(schedule_df):
-    """FastF1 event-schedule DataFrame -> list of race/sprint session dicts.
+def openf1_get(path):
+    """GET an OpenF1 endpoint; return the parsed JSON list."""
+    url = f"{OPENF1_BASE}/{path}"
+    req = urllib.request.Request(url, headers={"User-Agent": "race-replay"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.load(resp)
+
+
+def _iso_to_posix(iso_str):
+    """ISO8601 string -> POSIX seconds (float)."""
+    return datetime.fromisoformat(iso_str).timestamp()
+
+
+def position_at(events, t):
+    """events: list of (posix_time, position) sorted ascending.
+    Return the position in effect at time t (most recent event <= t,
+    or the first event's position if t precedes all events)."""
+    pos = events[0][1]
+    for et, ep in events:
+        if et <= t:
+            pos = ep
+        else:
+            break
+    return pos
+
+
+def compound_for_lap(stints, lap_number):
+    """stints: list of dicts with lap_start, lap_end, compound (one driver).
+    Return the compound covering lap_number, or 'UNKNOWN' if none."""
+    for st in stints:
+        if st["lap_start"] <= lap_number <= st["lap_end"]:
+            return st["compound"]
+    return "UNKNOWN"
+
+
+def load_openf1_race(session_key):
+    """Build per-driver render data from OpenF1 for one session."""
+    drivers = openf1_get(f"drivers?session_key={session_key}")
+    laps = openf1_get(f"laps?session_key={session_key}")
+    positions = openf1_get(f"position?session_key={session_key}")
+    stints = openf1_get(f"stints?session_key={session_key}")
+
+    d_data = {}
+    global_start = float("inf")
+    global_end = 0.0
+    total_laps = 0
+
+    for drv in drivers:
+        dn = drv["driver_number"]
+        code = drv["name_acronym"]
+        drv_laps = sorted([l for l in laps if l["driver_number"] == dn],
+                          key=lambda l: l["lap_number"])
+        if not drv_laps:
+            continue
+
+        # durations: fall back to next lap's start, else this driver's median
+        known = [l["lap_duration"] for l in drv_laps if l["lap_duration"] is not None]
+        median_dur = sorted(known)[len(known) // 2] if known else 90.0
+
+        lap_nums, lap_starts, lap_ends = [], [], []
+        for i, l in enumerate(drv_laps):
+            start = _iso_to_posix(l["date_start"])
+            dur = l["lap_duration"]
+            if dur is None:
+                if i + 1 < len(drv_laps):
+                    end = _iso_to_posix(drv_laps[i + 1]["date_start"])
+                else:
+                    end = start + median_dur
+            else:
+                end = start + dur
+            lap_nums.append(l["lap_number"])
+            lap_starts.append(start)
+            lap_ends.append(end)
+
+        pos_events = sorted(
+            (_iso_to_posix(p["date"]), p["position"])
+            for p in positions
+            if p["driver_number"] == dn and p["position"] is not None
+        )
+        if not pos_events:
+            continue  # cannot place this driver without positions
+        drv_stints = [s for s in stints if s["driver_number"] == dn]
+
+        positions_arr = [position_at(pos_events, e) for e in lap_ends]
+        compounds_arr = [compound_for_lap(drv_stints, n) for n in lap_nums]
+
+        start_time = lap_starts[0]
+        times = np.insert(np.array(lap_ends, dtype=float), 0, start_time)
+        laps_arr = np.insert(np.array(lap_nums, dtype=float), 0, 0)
+        pos_arr = np.insert(np.array(positions_arr, dtype=float), 0, positions_arr[0])
+        comp_arr = np.insert(np.array(compounds_arr, dtype=object), 0, compounds_arr[0])
+
+        try:
+            color = get_constructor_color(drv.get("team_name", ""))
+        except Exception:
+            color = "#888888"
+
+        d_data[code] = {
+            "laps": laps_arr, "pos": pos_arr, "times": times,
+            "compounds": comp_arr, "color": color, "max_time": lap_ends[-1],
+        }
+        global_start = min(global_start, start_time)
+        global_end = max(global_end, lap_ends[-1])
+        total_laps = max(total_laps, max(lap_nums))
+
+    if not d_data:
+        raise RuntimeError(f"OpenF1: no usable lap data for session {session_key}")
+    return d_data, int(total_laps), len(d_data), global_start, global_end
+
+
+def list_sessions(sessions_json):
+    """OpenF1 sessions JSON list -> list of race/sprint session dicts.
 
     Matches the session names 'Race' and 'Sprint' exactly, so 'Sprint
     Qualifying' / 'Sprint Shootout' are ignored.
     """
     sessions = []
-    for _, ev in schedule_df.iterrows():
-        for i in range(1, 6):
-            name = ev.get(f"Session{i}")
-            date = ev.get(f"Session{i}DateUtc")
-            if name not in ("Race", "Sprint"):
-                continue
-            if date is None or pd.isna(date):
-                continue
-            kind = "S" if name == "Sprint" else "R"
-            start = pd.Timestamp(date).to_pydatetime()
-            sessions.append({
-                "event": ev["EventName"],
-                "round": int(ev["RoundNumber"]),
-                "kind": kind,
-                "start": start,
-                "end": session_end_time(start, kind),
-            })
+    for s in sessions_json:
+        name = s.get("session_name")
+        if name not in ("Race", "Sprint"):
+            continue
+        kind = "S" if name == "Sprint" else "R"
+        start = (datetime.fromisoformat(s["date_start"])
+                 .astimezone(timezone.utc).replace(tzinfo=None))
+        sessions.append({
+            "event": s.get("location") or s.get("circuit_short_name"),
+            "kind": kind,
+            "start": start,
+            "end": session_end_time(start, kind),
+            "session_key": int(s["session_key"]),
+        })
     return sessions
 
 
@@ -429,27 +493,36 @@ def rewrite_cron_block(workflow_text, cron_lines):
 
 
 def load_event_schedule(season):
-    """Return the FastF1 event-schedule DataFrame for a season."""
-    return fastf1.get_event_schedule(season, include_testing=False)
+    """Return the OpenF1 sessions list for a season."""
+    return openf1_get(f"sessions?year={season}")
 
 
-def session_has_data(year, event_name, kind):
-    """True once FastF1 has lap data for the session.
+def session_has_data(session_key):
+    """True once OpenF1 has lap data for the session.
 
-    Returns False (so a later cron slot retries) both when the session is not
-    loadable yet and when it loads but has no laps. The exception text is
+    Returns False (so a later cron slot retries) both when the laps endpoint
+    is not reachable yet and when it returns no laps. The exception text is
     printed so a genuine, persistent failure is still visible in the logs.
     """
     try:
-        session = fastf1.get_session(year, event_name, kind)
-        session.load(laps=True, telemetry=False, weather=False, messages=False)
+        return len(openf1_get(f"laps?session_key={session_key}")) > 0
     except Exception as exc:
-        print(f"  session not loadable yet ({event_name} {kind}): {exc}")
+        print(f"  OpenF1 laps not ready for session {session_key}: {exc}")
         return False
-    if len(session.laps) == 0:
-        print(f"  session loaded but has no laps yet ({event_name} {kind})")
-        return False
-    return True
+
+
+def openf1_find_session(year, gp, kind):
+    """Resolve a (year, gp-name, kind) to an OpenF1 session_key."""
+    target = "Sprint" if kind == "S" else "Race"
+    gp_l = gp.lower()
+    for s in openf1_get(f"sessions?year={year}"):
+        if s.get("session_name") != target:
+            continue
+        hay = " ".join(str(s.get(k, "")).lower()
+                        for k in ("location", "circuit_short_name", "country_name"))
+        if any(w in hay for w in gp_l.split()):
+            return s["session_key"]
+    raise RuntimeError(f"OpenF1: no {target} session found for {year} {gp}")
 
 
 def get_drive_service():
@@ -563,16 +636,16 @@ def render_due(now):
         if drive_has_file(service, folder, slug):
             print(f"  ALREADY_RENDERED ({slug})")
             continue
-        # session_has_data loads the session as a readiness gate;
-        # create_race_timelapse loads it again to render. The second load is
-        # cheap thanks to the FastF1 cache. Keep both: the readiness gate must
-        # remain even if the render path changes.
-        if not session_has_data(SEASON, s["event"], s["kind"]):
+        # session_has_data hits the OpenF1 laps endpoint as a readiness gate;
+        # create_race_timelapse fetches the data again to render. The second
+        # fetch is a fresh set of OpenF1 calls. Keep both: the readiness gate
+        # must remain even if the render path changes.
+        if not session_has_data(s["session_key"]):
             print(f"  DATA_NOT_READY ({s['event']} {s['kind']})")
             continue
         out_path = os.path.join(OUTPUT_DIR, slug)
         create_race_timelapse(
-            year=SEASON, gp=s["event"], session_type=s["kind"],
+            session_key=s["session_key"], gp=s["event"], year=SEASON,
             save_path=out_path, duration=DURATION_SECONDS, fps=FPS,
             portrait=PORTRAIT, session_label=session_label_for(s["kind"]),
         )
@@ -597,8 +670,9 @@ def main():
         year, event, kind = parse_force_session(args.force_session)
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         out_path = os.path.join(OUTPUT_DIR, output_slug(event, year, kind))
+        sk = openf1_find_session(year, event, kind)
         create_race_timelapse(
-            year=year, gp=event, session_type=kind, save_path=out_path,
+            session_key=sk, gp=event, year=year, save_path=out_path,
             duration=args.duration, fps=FPS, portrait=PORTRAIT,
             session_label=session_label_for(kind),
         )
@@ -610,8 +684,9 @@ def main():
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         out_path = os.path.join(OUTPUT_DIR, "TEST_" + output_slug(event, year, kind))
         print(f"=== END-TO-END TEST: {event} {kind} ({year}) ===")
+        sk = openf1_find_session(year, event, kind)
         create_race_timelapse(
-            year=year, gp=event, session_type=kind, save_path=out_path,
+            session_key=sk, gp=event, year=year, save_path=out_path,
             duration=args.duration, fps=FPS, portrait=PORTRAIT,
             session_label=session_label_for(kind),
         )
