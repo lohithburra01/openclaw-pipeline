@@ -2,6 +2,11 @@ name: F1 Race Replay
 
 on:
   workflow_dispatch:
+    inputs:
+      test_session:
+        description: 'TEST ONLY: render a past race + upload to Drive, e.g. 2026 Miami R. Leave blank for a normal run.'
+        required: false
+        default: ''
   schedule:
     # === BEGIN AUTO-MANAGED CRON (edited by race_replay.py) ===
     - cron: "0 0 25 5 *"
@@ -16,6 +21,9 @@ on:
     - cron: "45 0 25 5 *"
     - cron: "45 19 23 5 *"
     # === END AUTO-MANAGED CRON ===
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write
@@ -63,7 +71,7 @@ jobs:
           GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
           GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-        run: python race_replay.py
+        run: python race_replay.py --test-session "${{ github.event.inputs.test_session }}"
 
       - name: Upload artifact backup
         if: always()

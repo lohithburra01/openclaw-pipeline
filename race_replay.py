@@ -588,6 +588,9 @@ def main():
                         help='render one session locally, e.g. "2026 Miami R"')
     parser.add_argument("--duration", type=int, default=DURATION_SECONDS,
                         help="override video length in seconds (for testing)")
+    parser.add_argument("--test-session", metavar="SPEC", default="",
+                        help='end-to-end test: render a past session AND upload '
+                             'it to Google Drive as TEST_<name>, e.g. "2026 Miami R"')
     args = parser.parse_args()
 
     if args.force_session:
@@ -600,6 +603,23 @@ def main():
             session_label=session_label_for(kind),
         )
         print(f"Rendered {out_path}")
+        return
+
+    if args.test_session:
+        year, event, kind = parse_force_session(args.test_session)
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        out_path = os.path.join(OUTPUT_DIR, "TEST_" + output_slug(event, year, kind))
+        print(f"=== END-TO-END TEST: {event} {kind} ({year}) ===")
+        create_race_timelapse(
+            year=year, gp=event, session_type=kind, save_path=out_path,
+            duration=args.duration, fps=FPS, portrait=PORTRAIT,
+            session_label=session_label_for(kind),
+        )
+        print(f"Rendered {out_path}")
+        service = get_drive_service()
+        folder = os.environ["GDRIVE_FOLDER_ID"]
+        file_id = drive_upload_file(service, folder, out_path)
+        print(f"UPLOADED test video to Google Drive (file id {file_id})")
         return
 
     now = datetime.utcnow()
