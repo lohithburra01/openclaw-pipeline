@@ -11,6 +11,8 @@ import json
 import re
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -116,7 +118,9 @@ def create_race_timelapse(session_key, gp='Bahrain', year=2026,
     
     total_frames = duration * fps
     print(f"Rendering {total_frames} frames to {save_path}...")
-    
+
+    smoothed_last_lap = 0.0  # smoothing tracker for the trailing view edge
+
     for frame_idx in range(total_frames):
         progress = frame_idx / (total_frames - 1)
         current_time = global_start_time + progress * (global_end_time - global_start_time)
@@ -142,11 +146,19 @@ def create_race_timelapse(session_key, gp='Bahrain', year=2026,
                 'alpha': alpha, 'gap': gap_to_leader
             }
 
+        # --- SMOOTHED WINDOW LOGIC ---
         active_laps = [s['lap'] for d, s in current_states.items() if s['alpha'] > 0]
         leader_lap = current_states[leader_drv]['lap']
-        last_lap = min(active_laps) if active_laps else leader_lap
-        
-        window_size = max(1.0, (leader_lap - last_lap) * 1.15)
+        target_last_lap = min(active_laps) if active_laps else leader_lap
+
+        if frame_idx == 0:
+            smoothed_last_lap = target_last_lap
+        else:
+            # shift the trailing boundary 5% toward the target each frame
+            smoothed_last_lap += (target_last_lap - smoothed_last_lap) * 0.05
+
+        # enforce a minimum 5-lap window to prevent excessive zoom
+        window_size = max(5.0, (leader_lap - smoothed_last_lap) * 1.15)
         view_max_x = leader_lap + (window_size * 0.1)
         view_min_x = view_max_x - window_size
 
@@ -309,12 +321,24 @@ def output_slug(event_name, year, kind):
     return f"{base}_{year}_{kind}.mp4"
 
 
-def openf1_get(path):
-    """GET an OpenF1 endpoint; return the parsed JSON list."""
+def openf1_get(path, retries=5):
+    """GET an OpenF1 endpoint; return the parsed JSON list.
+
+    Retries with backoff on rate-limit (429) and transient server errors so
+    an unattended run rides out a temporary OpenF1 hiccup."""
     url = f"{OPENF1_BASE}/{path}"
     req = urllib.request.Request(url, headers={"User-Agent": "race-replay"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.load(resp)
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as exc:
+            if exc.code in (429, 500, 502, 503, 504) and attempt < retries - 1:
+                wait = 10 * (attempt + 1)
+                print(f"  OpenF1 returned {exc.code}; retrying in {wait}s...")
+                time.sleep(wait)
+                continue
+            raise
 
 
 def _iso_to_posix(iso_str):
@@ -691,10 +715,14 @@ def main():
             session_label=session_label_for(kind),
         )
         print(f"Rendered {out_path}")
-        service = get_drive_service()
-        folder = os.environ["GDRIVE_FOLDER_ID"]
-        file_id = drive_upload_file(service, folder, out_path)
-        print(f"UPLOADED test video to Google Drive (file id {file_id})")
+        try:
+            service = get_drive_service()
+            folder = os.environ["GDRIVE_FOLDER_ID"]
+            file_id = drive_upload_file(service, folder, out_path)
+            print(f"UPLOADED test video to Google Drive (file id {file_id})")
+        except Exception as exc:
+            print(f"NOTE: Drive upload skipped ({type(exc).__name__}: {exc})")
+            print("The rendered video is still saved as a workflow artifact.")
         return
 
     now = datetime.utcnow()
