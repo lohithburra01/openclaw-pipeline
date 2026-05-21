@@ -1,0 +1,47 @@
+name: OpenF1 Probe
+
+# Temporary diagnostic: checks whether a GitHub Actions runner can reach the
+# OpenF1 API. Safe to delete once the result is known.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reach OpenF1 from a GitHub runner
+        run: |
+          python - <<'EOF'
+          import urllib.request, json, sys
+
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": "openf1-probe"})
+              with urllib.request.urlopen(req, timeout=40) as r:
+                  return json.load(r)
+
+          try:
+              sessions = get("https://api.openf1.org/v1/sessions?year=2026")
+              races = [s for s in sessions if s.get("session_name") == "Race"]
+              sprints = [s for s in sessions if s.get("session_name") == "Sprint"]
+              print(f"OpenF1 sessions reachable: 2026 has {len(races)} races, {len(sprints)} sprints")
+
+              miami = [s for s in races
+                       if "miami" in str(s.get("circuit_short_name", "")).lower()][0]
+              sk = miami["session_key"]
+              laps = get(f"https://api.openf1.org/v1/laps?session_key={sk}")
+              pos = get(f"https://api.openf1.org/v1/position?session_key={sk}")
+              stints = get(f"https://api.openf1.org/v1/stints?session_key={sk}")
+              print(f"Miami race (session_key={sk}): "
+                    f"laps={len(laps)} position={len(pos)} stints={len(stints)}")
+
+              if laps and pos and stints:
+                  print("OPENF1_PROBE_RESULT: SUCCESS - GitHub runner CAN reach OpenF1")
+              else:
+                  print("OPENF1_PROBE_RESULT: REACHABLE but a dataset was empty")
+                  sys.exit(1)
+          except Exception as exc:
+              print(f"OPENF1_PROBE_RESULT: FAILED -> {type(exc).__name__}: {exc}")
+              sys.exit(1)
+          EOF
