@@ -1,0 +1,457 @@
+{
+  "name": "Formulytics Poster",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "every-15-minutes",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// EDIT THESE FOUR VALUES, then this workflow needs no other editing.\nreturn [{ json: {\n  // The Google Sheet id from its URL: docs.google.com/spreadsheets/d/<THIS>/edit\n  manifestSheetId: \"PASTE_YOUR_MANIFEST_SHEET_ID_HERE\",\n  // Your Zernio account ids (Zernio dashboard -> connected accounts).\n  zernioInstagramAccountId: \"6a103559520992756d9bdd85\",\n  zernioYoutubeAccountId: \"6a1035ed520992756d9be08e\",\n  // Gemini model id. Update if Google retires this model.\n  geminiModel: \"gemini-3.5-flash\"\n} }];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "config",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "method": "GET",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $json.manifestSheetId }}/values/sessions",
+        "options": {}
+      },
+      "id": "read-manifest",
+      "name": "Read Manifest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn the raw sheet values into rows, then pick ONE session to post.\nconst resp = $input.first().json;\nconst values = resp.values || [];\nif (values.length < 2) return [];          // empty sheet or header only\n\nconst headers = values[0];\nconst rows = values.slice(1).map((raw, i) => {\n  const r = {};\n  headers.forEach((h, j) => { r[h] = (raw[j] !== undefined ? raw[j] : \"\"); });\n  r._row = i + 2;                          // 1-based sheet row (row 1 = header)\n  return r;\n});\n\nconst STALE_MS = 30 * 60 * 1000;           // a 'posting' row older than 30 min crashed\nconst now = Date.now();\n\nconst eligible = rows.filter(r => {\n  if (r.render_status !== \"rendered\") return false;   // video must exist\n  if (!r.drive_file_id) return false;\n  const ps = r.post_status;\n  if (ps === \"posted\" || ps === \"skipped\") return false;\n  if (ps === \"posting\") {\n    const started = Date.parse(r.post_started_at || \"\");\n    if (started && (now - started) < STALE_MS) return false;  // claimed, still running\n  }\n  if (ps === \"error\" && Number(r.attempts || 0) >= 3) return false;  // give up after 3\n  return true;\n});\n\nif (eligible.length === 0) return [];      // nothing to do; workflow stops here\neligible.sort((a, b) => String(a.session_date).localeCompare(String(b.session_date)));\nreturn [{ json: eligible[0] }];            // oldest unposted session\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "pick-row-to-post",
+      "name": "Pick Row To Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Config').first().json.manifestSheetId }}/values/sessions!J{{ $json._row }}:K{{ $json._row }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "valueInputOption",
+              "value": "RAW"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: [[ 'posting', $now.toISO() ]] }) }}",
+        "options": {}
+      },
+      "id": "claim-row",
+      "name": "Claim Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.openf1.org/v1/session_result?session_key={{ $('Pick Row To Post').first().json.openf1_session_key }}",
+        "options": {}
+      },
+      "id": "openf1-result",
+      "name": "OpenF1 Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.openf1.org/v1/drivers?session_key={{ $('Pick Row To Post').first().json.openf1_session_key }}",
+        "options": {}
+      },
+      "id": "openf1-drivers",
+      "name": "OpenF1 Drivers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1820,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the OpenF1 results summary and the full Gemini request body.\nconst row = $('Pick Row To Post').first().json;\nconst results = $('OpenF1 Result').first().json;\nconst drivers = $('OpenF1 Drivers').first().json;\n\nconst dmap = {};\nif (Array.isArray(drivers)) {\n  for (const d of drivers) {\n    dmap[d.driver_number] = {\n      name: d.full_name || d.broadcast_name || d.last_name || ('#' + d.driver_number),\n      team: d.team_name || ''\n    };\n  }\n}\n\nlet summary = '';\nif (Array.isArray(results) && results.length) {\n  const classified = results\n    .filter(r => r.position != null)\n    .sort((a, b) => a.position - b.position);\n  summary = classified.slice(0, 10).map(r => {\n    const d = dmap[r.driver_number] || { name: '#' + r.driver_number, team: '' };\n    const flags = [r.dnf && 'DNF', r.dns && 'DNS', r.dsq && 'DSQ'].filter(Boolean).join('/');\n    const gap = (r.position > 1 && r.gap_to_leader != null) ? (' +' + r.gap_to_leader) : '';\n    return 'P' + r.position + ' ' + d.name + ' (' + d.team + ')' + gap +\n           (flags ? ' [' + flags + ']' : '');\n  }).join('\\n');\n}\n\nconst prompt =\n  'You write social captions for Formulytics (@formulytics), an F1 data-' +\n  'visualization account. Tone: fan-to-fan, raw, opinionated, all lowercase.\\n\\n' +\n  'CONFIRMED OFFICIAL RESULT (from F1 timing - never contradict this):\\n' +\n  (summary || '(results not in yet - use Google Search to find them)') + '\\n\\n' +\n  'Session: ' + row.gp_name + ' ' + row.session + '\\n\\n' +\n  'Use Google Search for context: key battles, crashes, penalties, ' +\n  'championship implications, records.\\n\\n' +\n  'Return ONLY a JSON object - no markdown, no code fences - with exactly two ' +\n  'string keys:\\n' +\n  '- \"instagram_caption\": a punchy hook line with one emoji, then 2-3 short ' +\n  'factual lines, then a debate question, then exactly 5 hashtags on one line ' +\n  'ending with #f1reels. all lowercase. no em dashes.\\n' +\n  '- \"youtube_title\": format \"' + row.gp_name + ' 2026 ' + row.session +\n  ' [flag emoji] [Main Story In Title Case] | F1 2026\", max 100 characters.';\n\nreturn [{ json: {\n  geminiBody: { tools: [{ google_search: {} }], contents: [{ parts: [{ text: prompt }] }] },\n  sessionId: row.session_id,\n  driveFileId: row.drive_file_id,\n  rowNumber: row._row\n}}];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "build-caption-request",
+      "name": "Build Caption Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $('Config').first().json.geminiModel }}:generateContent",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.geminiBody) }}",
+        "options": {}
+      },
+      "id": "generate-caption",
+      "name": "Generate Caption",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2340,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull the JSON caption out of the Gemini response.\nconst resp = $input.first().json;\nlet txt = '';\ntry {\n  txt = (resp.candidates[0].content.parts || [])\n    .filter(p => p.text).map(p => p.text).join('');\n} catch (e) {\n  throw new Error('Gemini returned no usable text');\n}\ntxt = txt.replace(/```json/gi, '').replace(/```/g, '').trim();\n\nlet parsed;\ntry { parsed = JSON.parse(txt); }\ncatch (e) { throw new Error('Gemini did not return valid JSON: ' + txt.slice(0, 200)); }\n\nconst clean = s => String(s || '').replace(/[\\u2014\\u2013]/g, '-').trim();\nlet yt = clean(parsed.youtube_title);\nif (yt.length > 100) yt = yt.slice(0, 97).trim() + '...';\n\nconst prev = $('Build Caption Request').first().json;\nreturn [{ json: {\n  instagramCaption: clean(parsed.instagram_caption),\n  youtubeTitle: yt,\n  sessionId: prev.sessionId,\n  driveFileId: prev.driveFileId,\n  rowNumber: prev.rowNumber\n}}];\n",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "parse-caption",
+      "name": "Parse Caption",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://zernio.com/api/v1/media/presign",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fileName: $json.sessionId + '.mp4', fileType: 'video/mp4' }) }}",
+        "options": {}
+      },
+      "id": "zernio-presign",
+      "name": "Zernio Presign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "method": "GET",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $('Parse Caption').first().json.driveFileId }}?alt=media",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "download-video",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Zernio Presign').first().json.uploadUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "video/mp4"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "zernio-upload",
+      "name": "Zernio Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3380,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "url": "https://zernio.com/api/v1/posts",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: $('Parse Caption').first().json.instagramCaption, mediaItems: [{ url: $('Zernio Presign').first().json.publicUrl, type: 'video' }], platforms: [  { platform: 'instagram',    accountId: $('Config').first().json.zernioInstagramAccountId,    platformSpecificData: { contentType: 'reels', shareToFeed: true } },  { platform: 'youtube',    accountId: $('Config').first().json.zernioYoutubeAccountId,    platformSpecificData: {      title: $('Parse Caption').first().json.youtubeTitle,      visibility: 'public' } } ], publishNow: true}) }}",
+        "options": {}
+      },
+      "id": "zernio-create-post",
+      "name": "Zernio Create Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3640,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{ $('Config').first().json.manifestSheetId }}/values/sessions!J{{ $('Parse Caption').first().json.rowNumber }}:O{{ $('Parse Caption').first().json.rowNumber }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "valueInputOption",
+              "value": "RAW"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ values: [[ 'posted', $now.toISO(), $now.toISO(), ($('Zernio Create Post').first().json.id || $('Zernio Create Post').first().json._id || ''), '0', '' ]] }) }}",
+        "options": {}
+      },
+      "id": "mark-posted",
+      "name": "Mark Posted",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3900,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Read Manifest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Manifest": {
+      "main": [
+        [
+          {
+            "node": "Pick Row To Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Row To Post": {
+      "main": [
+        [
+          {
+            "node": "Claim Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim Row": {
+      "main": [
+        [
+          {
+            "node": "OpenF1 Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenF1 Result": {
+      "main": [
+        [
+          {
+            "node": "OpenF1 Drivers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenF1 Drivers": {
+      "main": [
+        [
+          {
+            "node": "Build Caption Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Caption Request": {
+      "main": [
+        [
+          {
+            "node": "Generate Caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Caption": {
+      "main": [
+        [
+          {
+            "node": "Parse Caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Caption": {
+      "main": [
+        [
+          {
+            "node": "Zernio Presign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zernio Presign": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Zernio Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zernio Upload": {
+      "main": [
+        [
+          {
+            "node": "Zernio Create Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zernio Create Post": {
+      "main": [
+        [
+          {
+            "node": "Mark Posted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
