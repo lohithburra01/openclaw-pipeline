@@ -289,3 +289,26 @@ def test_manifest_plan_refreshes_pending_row_when_key_changed():
     appends, refreshes = rr.manifest_plan(existing, sessions, now, season=2026)
     assert appends == []
     assert refreshes == [(2, "2026-05-24", "100")]
+
+
+def test_parse_manifest_values_empty():
+    assert rr.parse_manifest_values([]) == []
+
+
+def test_parse_manifest_values_keys_and_row_numbers():
+    values = [
+        ["session_id", "render_status"],
+        ["monaco_2026_R", "pending"],
+        ["miami_2026_R", "rendered"],
+    ]
+    rows = rr.parse_manifest_values(values)
+    assert rows[0] == {"session_id": "monaco_2026_R",
+                       "render_status": "pending", "_row": 2}
+    assert rows[1]["_row"] == 3
+
+
+def test_parse_manifest_values_pads_short_rows():
+    values = [["session_id", "render_status", "drive_file_id"],
+              ["monaco_2026_R", "pending"]]
+    rows = rr.parse_manifest_values(values)
+    assert rows[0]["drive_file_id"] == ""

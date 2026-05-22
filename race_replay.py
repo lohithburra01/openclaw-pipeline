@@ -813,6 +813,85 @@ def manifest_plan(existing_rows, sessions, now, season=None):
     return appends, refreshes
 
 
+def parse_manifest_values(values):
+    """Raw sheet values (first row = headers) -> list of row dicts keyed by
+    header, each with a 1-based '_row' sheet row number. Short rows are
+    padded with empty strings."""
+    if not values:
+        return []
+    headers = values[0]
+    rows = []
+    for i, raw in enumerate(values[1:], start=2):
+        record = {h: (raw[j] if j < len(raw) else "") for j, h in enumerate(headers)}
+        record["_row"] = i
+        rows.append(record)
+    return rows
+
+
+def load_meetings(season):
+    """Return the OpenF1 meetings list for a season."""
+    return openf1_get(f"meetings?year={season}")
+
+
+def read_manifest(service, sheet_id):
+    """Read the manifest tab into a list of row dicts (see parse_manifest_values)."""
+    resp = service.spreadsheets().values().get(
+        spreadsheetId=sheet_id, range=MANIFEST_TAB
+    ).execute()
+    return parse_manifest_values(resp.get("values", []))
+
+
+def update_render_row(service, sheet_id, row_number,
+                      render_status, rendered_at, drive_file_id, render_notes):
+    """Write the four producer-owned columns (F:I) of one manifest row."""
+    service.spreadsheets().values().update(
+        spreadsheetId=sheet_id,
+        range=f"{MANIFEST_TAB}!F{row_number}:I{row_number}",
+        valueInputOption="RAW",
+        body={"values": [[render_status, rendered_at, drive_file_id, render_notes]]},
+    ).execute()
+
+
+def ensure_manifest(service, sheet_id, sessions, now):
+    """Seed/maintain the manifest. Writes the header row if the sheet is
+    empty, appends rows for new sessions, and refreshes the schedule fields
+    of pending rows. Append-only with respect to status."""
+    raw = service.spreadsheets().values().get(
+        spreadsheetId=sheet_id, range=MANIFEST_TAB
+    ).execute().get("values", [])
+
+    if not raw:
+        service.spreadsheets().values().update(
+            spreadsheetId=sheet_id, range=f"{MANIFEST_TAB}!A1",
+            valueInputOption="RAW", body={"values": [MANIFEST_HEADERS]},
+        ).execute()
+        existing = []
+    else:
+        existing = parse_manifest_values(raw)
+
+    appends, refreshes = manifest_plan(existing, sessions, now)
+
+    if appends:
+        service.spreadsheets().values().append(
+            spreadsheetId=sheet_id, range=MANIFEST_TAB,
+            valueInputOption="RAW", insertDataOption="INSERT_ROWS",
+            body={"values": appends},
+        ).execute()
+
+    if refreshes:
+        data = [
+            {"range": f"{MANIFEST_TAB}!D{row}:E{row}", "values": [[date, key]]}
+            for row, date, key in refreshes
+        ]
+        service.spreadsheets().values().batchUpdate(
+            spreadsheetId=sheet_id,
+            body={"valueInputOption": "RAW", "data": data},
+        ).execute()
+
+    print(f"  manifest: {len(appends)} rows added, {len(refreshes)} refreshed")
+    return appends, refreshes
+
+
 def main():
     parser = argparse.ArgumentParser(description="F1 race-replay pipeline")
     parser.add_argument("--dry-run", action="store_true",
