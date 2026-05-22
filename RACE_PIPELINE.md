@@ -80,6 +80,7 @@ A **qualifying** video format is being built and will land in the same Drive
 folder with the suffix **`_Q`** (e.g. `montreal_2026_Q.mp4`). Make sure your
 new-file detection and caption logic handle `_Q` as well as `_R` and `_S`.
 
-(An older, superseded sketch of the posting design exists in
-`FORMULYTICS_PIPELINE.md` — ignore it; this document is authoritative for what
-the race pipeline actually produces.)
+The pipeline is now coordinated by a Google Sheet "season manifest" — the
+authoritative design is `docs/superpowers/specs/2026-05-22-pipeline-manifest-design.md`,
+and `RUNBOOK.md` is the plain-language operating guide. Older posting sketches
+have been moved to `docs/archive/`.
