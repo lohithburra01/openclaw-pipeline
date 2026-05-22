@@ -708,37 +708,69 @@ def reschedule(now, dry_run=False):
 
 
 def render_due(now):
-    """Phase 2: render any just-ended session not already in Google Drive."""
+    """Phase 2: render any just-ended session that the manifest says is not
+    yet done, then record the result back to the manifest."""
     sessions = list_sessions(load_event_schedule(SEASON))
     candidates = due_sessions(sessions, now)
     if not candidates:
         print("NO_SESSION")
         return
 
-    service = get_drive_service()
+    drive = get_drive_service()
+    sheets = get_sheets_service()
     folder = os.environ["GDRIVE_FOLDER_ID"]
+    sheet_id = os.environ["MANIFEST_SHEET_ID"]
+    rows_by_id = {r["session_id"]: r for r in read_manifest(sheets, sheet_id)}
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     for s in candidates:
-        slug = output_slug(s["event"], SEASON, s["kind"])
-        print(f"Candidate: {s['event']} ({s['kind']}) -> {slug}")
-        if drive_has_file(service, folder, slug):
-            print(f"  ALREADY_RENDERED ({slug})")
+        sid = session_id_for(s["event"], SEASON, s["kind"])
+        row = rows_by_id.get(sid)
+        if row is None:
+            print(f"  NO_MANIFEST_ROW ({sid}); it will be seeded next run")
             continue
-        # session_has_data hits the OpenF1 laps endpoint as a readiness gate;
-        # create_race_timelapse fetches the data again to render. The second
-        # fetch is a fresh set of OpenF1 calls. Keep both: the readiness gate
-        # must remain even if the render path changes.
+        if row["render_status"] in ("rendered", "skipped"):
+            print(f"  SKIP ({sid}, render_status={row['render_status']})")
+            continue
+
+        slug = sid + ".mp4"
+
+        # Defensive adoption: a previous run may have uploaded the file but
+        # crashed before recording it. Adopt the existing file instead of
+        # re-rendering.
+        existing_id = drive_find_file(drive, folder, slug)
+        if existing_id:
+            print(f"  ADOPT ({slug} already in Drive)")
+            update_render_row(sheets, sheet_id, row["_row"],
+                              "rendered", utcnow_str(), existing_id, "")
+            continue
+
         if not session_has_data(s["session_key"]):
-            print(f"  DATA_NOT_READY ({s['event']} {s['kind']})")
+            print(f"  DATA_NOT_READY ({sid})")
             continue
+
         out_path = os.path.join(OUTPUT_DIR, slug)
-        create_race_timelapse(
-            session_key=s["session_key"], gp=s["event"], year=SEASON,
-            save_path=out_path, duration=DURATION_SECONDS, fps=FPS,
-            portrait=PORTRAIT, session_label=session_label_for(s["kind"]),
-        )
-        file_id = drive_upload_file(service, folder, out_path)
+        try:
+            create_race_timelapse(
+                session_key=s["session_key"], gp=s["event"], year=SEASON,
+                save_path=out_path, duration=DURATION_SECONDS, fps=FPS,
+                portrait=PORTRAIT, session_label=session_label_for(s["kind"]),
+            )
+        except Exception as exc:
+            update_render_row(sheets, sheet_id, row["_row"],
+                              "error", "", "", f"render failed: {exc}"[:200])
+            print(f"  RENDER_ERROR ({sid}): {exc}")
+            continue
+
+        if not is_valid_render(out_path):
+            update_render_row(sheets, sheet_id, row["_row"],
+                              "error", "", "", "render produced no valid video file")
+            print(f"  INVALID_RENDER ({sid})")
+            continue
+
+        file_id = drive_upload_file(drive, folder, out_path)
+        update_render_row(sheets, sheet_id, row["_row"],
+                          "rendered", utcnow_str(), file_id, "")
         print(f"  UPLOADED ({slug}, drive id {file_id})")
 
 
@@ -985,9 +1017,24 @@ def main():
 
     now = datetime.utcnow()
     print(f"=== race_replay.py @ {now} UTC (season {SEASON}) ===")
+
+    # Phase 0 - seed/maintain the manifest (skipped on a dry run, which writes
+    # nothing anywhere).
+    if not args.dry_run:
+        sheets = get_sheets_service()
+        sched = list_sessions(load_event_schedule(SEASON))
+        sched = attach_gp_names(sched, load_meetings(SEASON))
+        ensure_manifest(sheets, os.environ["MANIFEST_SHEET_ID"], sched, now)
+    else:
+        print("(dry-run) skipping manifest update.")
+
+    # Phase 1 - rewrite the workflow cron from the calendar.
     reschedule(now, dry_run=args.dry_run)
+
+    # Phase 2 - render due sessions, then refresh the off-season heartbeat.
     if not args.dry_run:
         render_due(now)
+        heartbeat(now)
 
 
 if __name__ == "__main__":
