@@ -749,12 +749,14 @@ def seed_status_for(session_end, now):
     return "skipped" if session_end <= now else "pending"
 
 
-def build_manifest_row(session, now):
+def build_manifest_row(session, now, season=None):
     """Build a full manifest row (list of values in MANIFEST_HEADERS order)
-    for a freshly-seeded session."""
+    for a freshly-seeded session. `season` defaults to the module SEASON."""
+    if season is None:
+        season = SEASON
     status = seed_status_for(session["end"], now)
     return [
-        session_id_for(session["event"], SEASON, session["kind"]),  # session_id
+        session_id_for(session["event"], season, session["kind"]),  # session_id
         session.get("gp_name", session["event"]),                   # gp_name
         session_name_for(session["kind"]),                          # session
         session["start"].strftime("%Y-%m-%d"),                      # session_date
@@ -773,30 +775,34 @@ def build_manifest_row(session, now):
 
 
 def attach_gp_names(sessions, meetings):
-    """Add a 'gp_name' key to each session by joining on meeting_key. Falls
-    back to the session's location when no meeting matches."""
+    """Add a 'gp_name' key to each session dict, in place, by joining on
+    meeting_key. Falls back to the session's location when no meeting
+    matches. Returns the same list for convenience."""
     by_key = {m.get("meeting_key"): m.get("meeting_name") for m in meetings}
     for s in sessions:
         s["gp_name"] = by_key.get(s.get("meeting_key")) or s["event"]
     return sessions
 
 
-def manifest_plan(existing_rows, sessions, now):
+def manifest_plan(existing_rows, sessions, now, season=None):
     """Pure diff between the manifest and the calendar.
 
     Returns (appends, refreshes):
       - appends: full rows (MANIFEST_HEADERS order) for sessions with no row.
       - refreshes: (row_number, session_date, openf1_session_key) tuples for
         existing 'pending' rows whose schedule fields have changed.
-    Never modifies the status of an existing row.
+    Never modifies the status of an existing row. `season` defaults to the
+    module SEASON.
     """
+    if season is None:
+        season = SEASON
     by_id = {r["session_id"]: r for r in existing_rows}
     appends, refreshes = [], []
     for s in sessions:
-        sid = session_id_for(s["event"], SEASON, s["kind"])
+        sid = session_id_for(s["event"], season, s["kind"])
         row = by_id.get(sid)
         if row is None:
-            appends.append(build_manifest_row(s, now))
+            appends.append(build_manifest_row(s, now, season))
             continue
         if row.get("render_status") == "pending":
             new_date = s["start"].strftime("%Y-%m-%d")

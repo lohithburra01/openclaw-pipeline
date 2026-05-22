@@ -202,6 +202,7 @@ def test_seed_status_for():
     now = datetime(2026, 5, 22, 12, 0)
     assert rr.seed_status_for(datetime(2026, 5, 10, 0, 0), now) == "skipped"
     assert rr.seed_status_for(datetime(2026, 6, 1, 0, 0), now) == "pending"
+    assert rr.seed_status_for(now, now) == "skipped"  # boundary: ends exactly now
 
 
 def _manifest_session(event, kind, start, end, key=99, meeting_key=7,
@@ -214,7 +215,7 @@ def test_build_manifest_row_future_session():
     now = datetime(2026, 5, 22, 12, 0)
     s = _manifest_session("Montreal", "R", datetime(2026, 5, 24, 18, 0),
                           datetime(2026, 5, 24, 20, 15), gp_name="Canadian Grand Prix")
-    row = rr.build_manifest_row(s, now)
+    row = rr.build_manifest_row(s, now, season=2026)
     assert len(row) == len(rr.MANIFEST_HEADERS)
     assert row[0] == "montreal_2026_R"      # session_id
     assert row[1] == "Canadian Grand Prix"  # gp_name
@@ -229,7 +230,7 @@ def test_build_manifest_row_past_session_is_skipped():
     now = datetime(2026, 5, 22, 12, 0)
     s = _manifest_session("Miami", "R", datetime(2026, 5, 3, 19, 0),
                           datetime(2026, 5, 3, 21, 15))
-    row = rr.build_manifest_row(s, now)
+    row = rr.build_manifest_row(s, now, season=2026)
     assert row[5] == "skipped"
     assert row[9] == "skipped"
 
@@ -251,7 +252,7 @@ def test_manifest_plan_appends_missing_session():
     now = datetime(2026, 5, 22, 12, 0)
     sessions = [_manifest_session("Montreal", "R", datetime(2026, 5, 24, 18, 0),
                                   datetime(2026, 5, 24, 20, 15))]
-    appends, refreshes = rr.manifest_plan([], sessions, now)
+    appends, refreshes = rr.manifest_plan([], sessions, now, season=2026)
     assert len(appends) == 1
     assert appends[0][0] == "montreal_2026_R"
     assert refreshes == []
@@ -263,7 +264,7 @@ def test_manifest_plan_skips_session_with_existing_row():
                                   datetime(2026, 5, 24, 20, 15))]
     existing = [{"session_id": "montreal_2026_R", "render_status": "rendered",
                  "session_date": "2026-05-24", "openf1_session_key": "99", "_row": 2}]
-    appends, refreshes = rr.manifest_plan(existing, sessions, now)
+    appends, refreshes = rr.manifest_plan(existing, sessions, now, season=2026)
     assert appends == []
     assert refreshes == []
 
@@ -274,6 +275,17 @@ def test_manifest_plan_refreshes_pending_row_when_date_moved():
                                   datetime(2026, 5, 25, 20, 15))]
     existing = [{"session_id": "montreal_2026_R", "render_status": "pending",
                  "session_date": "2026-05-24", "openf1_session_key": "99", "_row": 2}]
-    appends, refreshes = rr.manifest_plan(existing, sessions, now)
+    appends, refreshes = rr.manifest_plan(existing, sessions, now, season=2026)
     assert appends == []
     assert refreshes == [(2, "2026-05-25", "99")]
+
+
+def test_manifest_plan_refreshes_pending_row_when_key_changed():
+    now = datetime(2026, 5, 22, 12, 0)
+    sessions = [_manifest_session("Montreal", "R", datetime(2026, 5, 24, 18, 0),
+                                  datetime(2026, 5, 24, 20, 15), key=100)]
+    existing = [{"session_id": "montreal_2026_R", "render_status": "pending",
+                 "session_date": "2026-05-24", "openf1_session_key": "99", "_row": 2}]
+    appends, refreshes = rr.manifest_plan(existing, sessions, now, season=2026)
+    assert appends == []
+    assert refreshes == [(2, "2026-05-24", "100")]
