@@ -182,3 +182,17 @@ def test_parse_force_session_rejects_bad_input():
         rr.parse_force_session("2026 R")
     with pytest.raises(SystemExit):
         rr.parse_force_session("2026 Miami X")
+
+
+def test_session_id_for():
+    assert rr.session_id_for("Monaco", 2026, "R") == "monaco_2026_R"
+    assert rr.session_id_for("Las Vegas", 2026, "S") == "las_vegas_2026_S"
+
+
+def test_session_name_for():
+    assert rr.session_name_for("R") == "Race"
+    assert rr.session_name_for("S") == "Sprint"
+
+
+def test_fmt_dt():
+    assert rr.fmt_dt(datetime(2026, 5, 24, 22, 15, 30)) == "2026-05-24 22:15:30"

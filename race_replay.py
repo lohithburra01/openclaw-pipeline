@@ -315,10 +315,31 @@ def cron_for_datetime(dt):
     return f"{dt.minute} {dt.hour} {dt.day} {dt.month} *"
 
 
+def session_id_for(event_name, year, kind):
+    """Stable session id, e.g. 'monaco_2026_R'. Matches the Drive filename
+    stem and is the manifest's primary key."""
+    base = re.sub(r"[^a-z0-9]+", "_", str(event_name).lower()).strip("_")
+    return f"{base}_{year}_{kind}"
+
+
 def output_slug(event_name, year, kind):
-    """Stable output filename, e.g. 'canadian_grand_prix_2026_R.mp4'."""
-    base = re.sub(r"[^a-z0-9]+", "_", event_name.lower()).strip("_")
-    return f"{base}_{year}_{kind}.mp4"
+    """Stable output filename, e.g. 'monaco_2026_R.mp4'."""
+    return session_id_for(event_name, year, kind) + ".mp4"
+
+
+def session_name_for(kind):
+    """Session kind 'R'/'S' -> human-readable manifest 'session' value."""
+    return "Sprint" if kind == "S" else "Race"
+
+
+def fmt_dt(dt):
+    """A datetime -> manifest timestamp string 'YYYY-MM-DD HH:MM:SS'."""
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def utcnow_str():
+    """Current UTC time as a manifest timestamp string."""
+    return fmt_dt(datetime.utcnow())
 
 
 def openf1_get(path, retries=5):
