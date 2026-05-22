@@ -852,10 +852,11 @@ def update_render_row(service, sheet_id, row_number,
     ).execute()
 
 
-def ensure_manifest(service, sheet_id, sessions, now):
+def ensure_manifest(service, sheet_id, sessions, now, season=None):
     """Seed/maintain the manifest. Writes the header row if the sheet is
     empty, appends rows for new sessions, and refreshes the schedule fields
-    of pending rows. Append-only with respect to status."""
+    of pending rows. Append-only with respect to status. `season` defaults
+    to the module SEASON."""
     raw = service.spreadsheets().values().get(
         spreadsheetId=sheet_id, range=MANIFEST_TAB
     ).execute().get("values", [])
@@ -869,11 +870,11 @@ def ensure_manifest(service, sheet_id, sessions, now):
     else:
         existing = parse_manifest_values(raw)
 
-    appends, refreshes = manifest_plan(existing, sessions, now)
+    appends, refreshes = manifest_plan(existing, sessions, now, season=season)
 
     if appends:
         service.spreadsheets().values().append(
-            spreadsheetId=sheet_id, range=MANIFEST_TAB,
+            spreadsheetId=sheet_id, range=f"{MANIFEST_TAB}!A1",
             valueInputOption="RAW", insertDataOption="INSERT_ROWS",
             body={"values": appends},
         ).execute()
