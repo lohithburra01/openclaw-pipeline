@@ -1,0 +1,94 @@
+name: F1 Quali Replay
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_session:
+        description: 'TEST ONLY: render a past quali + upload to Drive, e.g. 2024 Monaco Q (or SQ). Leave blank for a normal run.'
+        required: false
+        default: ''
+  schedule:
+    # === BEGIN AUTO-MANAGED CRON (edited by quali_replay.py) ===
+    - cron: "0 0 23 5 *"
+    - cron: "0 12 * * 3"
+    - cron: "0 23 23 5 *"
+    - cron: "15 22 23 5 *"
+    - cron: "15 23 22 5 *"
+    - cron: "30 0 24 5 *"
+    - cron: "30 21 23 5 *"
+    - cron: "30 22 22 5 *"
+    - cron: "45 0 23 5 *"
+    - cron: "45 21 22 5 *"
+    - cron: "45 23 23 5 *"
+    # === END AUTO-MANAGED CRON ===
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: quali-replay
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.WORKFLOW_PAT }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-qualireplay
+
+      - name: Install dependencies
+        run: |
+          pip install -q opencv-python-headless pillow numpy scipy \
+            google-auth google-auth-httplib2 google-api-python-client
+
+      - name: Run quali replay pipeline
+        env:
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: python quali_replay.py --test-session "${{ github.event.inputs.test_session }}"
+
+      - name: Upload artifact backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quali-replay-video
+          path: output/*.mp4
+          retention-days: 5
+          if-no-files-found: ignore
+
+      - name: Email on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Formulytics quali producer run failed"
+          to: info@formula-neon.com
+          from: Formulytics Pipeline <${{ secrets.SMTP_USERNAME }}>
+          body: |
+            The quali-replay producer workflow failed.
+            Open the run log:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
