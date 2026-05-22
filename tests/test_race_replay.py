@@ -196,3 +196,84 @@ def test_session_name_for():
 
 def test_fmt_dt():
     assert rr.fmt_dt(datetime(2026, 5, 24, 22, 15, 30)) == "2026-05-24 22:15:30"
+
+
+def test_seed_status_for():
+    now = datetime(2026, 5, 22, 12, 0)
+    assert rr.seed_status_for(datetime(2026, 5, 10, 0, 0), now) == "skipped"
+    assert rr.seed_status_for(datetime(2026, 6, 1, 0, 0), now) == "pending"
+
+
+def _manifest_session(event, kind, start, end, key=99, meeting_key=7,
+                       gp_name="Test Grand Prix"):
+    return {"event": event, "kind": kind, "start": start, "end": end,
+            "session_key": key, "meeting_key": meeting_key, "gp_name": gp_name}
+
+
+def test_build_manifest_row_future_session():
+    now = datetime(2026, 5, 22, 12, 0)
+    s = _manifest_session("Montreal", "R", datetime(2026, 5, 24, 18, 0),
+                          datetime(2026, 5, 24, 20, 15), gp_name="Canadian Grand Prix")
+    row = rr.build_manifest_row(s, now)
+    assert len(row) == len(rr.MANIFEST_HEADERS)
+    assert row[0] == "montreal_2026_R"      # session_id
+    assert row[1] == "Canadian Grand Prix"  # gp_name
+    assert row[2] == "Race"                 # session
+    assert row[3] == "2026-05-24"           # session_date
+    assert row[5] == "pending"              # render_status
+    assert row[9] == "pending"              # post_status
+    assert row[13] == "0"                   # attempts
+
+
+def test_build_manifest_row_past_session_is_skipped():
+    now = datetime(2026, 5, 22, 12, 0)
+    s = _manifest_session("Miami", "R", datetime(2026, 5, 3, 19, 0),
+                          datetime(2026, 5, 3, 21, 15))
+    row = rr.build_manifest_row(s, now)
+    assert row[5] == "skipped"
+    assert row[9] == "skipped"
+
+
+def test_attach_gp_names():
+    sessions = [{"event": "Montreal", "meeting_key": 1}]
+    meetings = [{"meeting_key": 1, "meeting_name": "Canadian Grand Prix"}]
+    out = rr.attach_gp_names(sessions, meetings)
+    assert out[0]["gp_name"] == "Canadian Grand Prix"
+
+
+def test_attach_gp_names_fallback_to_event():
+    sessions = [{"event": "Montreal", "meeting_key": 999}]
+    out = rr.attach_gp_names(sessions, [])
+    assert out[0]["gp_name"] == "Montreal"
+
+
+def test_manifest_plan_appends_missing_session():
+    now = datetime(2026, 5, 22, 12, 0)
+    sessions = [_manifest_session("Montreal", "R", datetime(2026, 5, 24, 18, 0),
+                                  datetime(2026, 5, 24, 20, 15))]
+    appends, refreshes = rr.manifest_plan([], sessions, now)
+    assert len(appends) == 1
+    assert appends[0][0] == "montreal_2026_R"
+    assert refreshes == []
+
+
+def test_manifest_plan_skips_session_with_existing_row():
+    now = datetime(2026, 5, 22, 12, 0)
+    sessions = [_manifest_session("Montreal", "R", datetime(2026, 5, 24, 18, 0),
+                                  datetime(2026, 5, 24, 20, 15))]
+    existing = [{"session_id": "montreal_2026_R", "render_status": "rendered",
+                 "session_date": "2026-05-24", "openf1_session_key": "99", "_row": 2}]
+    appends, refreshes = rr.manifest_plan(existing, sessions, now)
+    assert appends == []
+    assert refreshes == []
+
+
+def test_manifest_plan_refreshes_pending_row_when_date_moved():
+    now = datetime(2026, 5, 22, 12, 0)
+    sessions = [_manifest_session("Montreal", "R", datetime(2026, 5, 25, 18, 0),
+                                  datetime(2026, 5, 25, 20, 15))]
+    existing = [{"session_id": "montreal_2026_R", "render_status": "pending",
+                 "session_date": "2026-05-24", "openf1_session_key": "99", "_row": 2}]
+    appends, refreshes = rr.manifest_plan(existing, sessions, now)
+    assert appends == []
+    assert refreshes == [(2, "2026-05-25", "99")]

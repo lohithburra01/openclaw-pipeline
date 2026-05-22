@@ -32,6 +32,15 @@ CRON_END = "# === END AUTO-MANAGED CRON ==="
 OUTPUT_DIR = "output"
 OPENF1_BASE = "https://api.openf1.org/v1"
 
+# --- MANIFEST (Google Sheet) ---
+MANIFEST_TAB = "sessions"
+MANIFEST_HEADERS = [
+    "session_id", "gp_name", "session", "session_date", "openf1_session_key",
+    "render_status", "rendered_at", "drive_file_id", "render_notes",
+    "post_status", "post_started_at", "posted_at", "post_link", "attempts",
+    "post_notes",
+]
+
 # --- CORE CONFIGURATION ---
 GLOBAL_SCALE = 0.90         
 VISUAL_GAP_FACTOR = 2.0     
@@ -484,6 +493,7 @@ def list_sessions(sessions_json):
             "start": start,
             "end": session_end_time(start, kind),
             "session_key": int(s["session_key"]),
+            "meeting_key": s.get("meeting_key"),
         })
     return sessions
 
@@ -727,6 +737,74 @@ def render_due(now):
         )
         file_id = drive_upload_file(service, folder, out_path)
         print(f"  UPLOADED ({slug}, drive id {file_id})")
+
+
+
+# ============================================================
+# MANIFEST & HEALTH
+# ============================================================
+def seed_status_for(session_end, now):
+    """A session whose end time is already past when its row is first created
+    is 'skipped'; everything still upcoming is 'pending'."""
+    return "skipped" if session_end <= now else "pending"
+
+
+def build_manifest_row(session, now):
+    """Build a full manifest row (list of values in MANIFEST_HEADERS order)
+    for a freshly-seeded session."""
+    status = seed_status_for(session["end"], now)
+    return [
+        session_id_for(session["event"], SEASON, session["kind"]),  # session_id
+        session.get("gp_name", session["event"]),                   # gp_name
+        session_name_for(session["kind"]),                          # session
+        session["start"].strftime("%Y-%m-%d"),                      # session_date
+        str(session["session_key"]),                                # openf1_session_key
+        status,                                                     # render_status
+        "",                                                         # rendered_at
+        "",                                                         # drive_file_id
+        "",                                                         # render_notes
+        status,                                                     # post_status
+        "",                                                         # post_started_at
+        "",                                                         # posted_at
+        "",                                                         # post_link
+        "0",                                                        # attempts
+        "",                                                         # post_notes
+    ]
+
+
+def attach_gp_names(sessions, meetings):
+    """Add a 'gp_name' key to each session by joining on meeting_key. Falls
+    back to the session's location when no meeting matches."""
+    by_key = {m.get("meeting_key"): m.get("meeting_name") for m in meetings}
+    for s in sessions:
+        s["gp_name"] = by_key.get(s.get("meeting_key")) or s["event"]
+    return sessions
+
+
+def manifest_plan(existing_rows, sessions, now):
+    """Pure diff between the manifest and the calendar.
+
+    Returns (appends, refreshes):
+      - appends: full rows (MANIFEST_HEADERS order) for sessions with no row.
+      - refreshes: (row_number, session_date, openf1_session_key) tuples for
+        existing 'pending' rows whose schedule fields have changed.
+    Never modifies the status of an existing row.
+    """
+    by_id = {r["session_id"]: r for r in existing_rows}
+    appends, refreshes = [], []
+    for s in sessions:
+        sid = session_id_for(s["event"], SEASON, s["kind"])
+        row = by_id.get(sid)
+        if row is None:
+            appends.append(build_manifest_row(s, now))
+            continue
+        if row.get("render_status") == "pending":
+            new_date = s["start"].strftime("%Y-%m-%d")
+            new_key = str(s["session_key"])
+            if (row.get("session_date") != new_date
+                    or row.get("openf1_session_key") != new_key):
+                refreshes.append((row["_row"], new_date, new_key))
+    return appends, refreshes
 
 
 def main():
