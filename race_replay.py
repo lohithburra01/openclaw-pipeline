@@ -40,6 +40,9 @@ MANIFEST_HEADERS = [
     "post_status", "post_started_at", "posted_at", "post_link", "attempts",
     "post_notes",
 ]
+HEARTBEAT_FILE = ".pipeline_heartbeat"
+HEARTBEAT_INTERVAL_DAYS = 5
+MIN_RENDER_BYTES = 1_000_000
 
 # --- CORE CONFIGURATION ---
 GLOBAL_SCALE = 0.90         
@@ -891,6 +894,45 @@ def ensure_manifest(service, sheet_id, sessions, now, season=None):
 
     print(f"  manifest: {len(appends)} rows added, {len(refreshes)} refreshed")
     return appends, refreshes
+
+
+def is_valid_render(path):
+    """True if `path` is a plausibly-complete video file: it exists and is
+    larger than MIN_RENDER_BYTES. Guards against a broken or empty render."""
+    return os.path.exists(path) and os.path.getsize(path) > MIN_RENDER_BYTES
+
+
+def heartbeat_due(last_str, now):
+    """True if the heartbeat should be refreshed: there is no prior heartbeat,
+    it cannot be parsed, or it is older than HEARTBEAT_INTERVAL_DAYS."""
+    if not last_str:
+        return True
+    try:
+        last = datetime.strptime(last_str.strip(), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return True
+    return (now - last) >= timedelta(days=HEARTBEAT_INTERVAL_DAYS)
+
+
+def read_heartbeat():
+    """Return the timestamp string in HEARTBEAT_FILE, or '' if it is absent."""
+    if not os.path.exists(HEARTBEAT_FILE):
+        return ""
+    with open(HEARTBEAT_FILE, encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def heartbeat(now):
+    """If the heartbeat is stale, rewrite and commit it. The commit keeps the
+    repository active so GitHub does not disable the scheduled workflow during
+    the off-season."""
+    if not heartbeat_due(read_heartbeat(), now):
+        print("Heartbeat fresh; no commit needed.")
+        return
+    with open(HEARTBEAT_FILE, "w", encoding="utf-8", newline="\n") as f:
+        f.write(fmt_dt(now) + "\n")
+    commit_and_push(HEARTBEAT_FILE, "chore: pipeline heartbeat")
+    print("Heartbeat updated.")
 
 
 def main():

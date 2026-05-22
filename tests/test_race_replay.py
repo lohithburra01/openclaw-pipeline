@@ -258,6 +258,38 @@ def test_manifest_plan_appends_missing_session():
     assert refreshes == []
 
 
+def test_is_valid_render_rejects_missing(tmp_path):
+    assert rr.is_valid_render(str(tmp_path / "nope.mp4")) is False
+
+
+def test_is_valid_render_rejects_tiny(tmp_path):
+    p = tmp_path / "tiny.mp4"
+    p.write_bytes(b"x" * 100)
+    assert rr.is_valid_render(str(p)) is False
+
+
+def test_is_valid_render_accepts_large(tmp_path):
+    p = tmp_path / "big.mp4"
+    p.write_bytes(b"x" * (rr.MIN_RENDER_BYTES + 1))
+    assert rr.is_valid_render(str(p)) is True
+
+
+def test_heartbeat_due_when_no_prior():
+    assert rr.heartbeat_due("", datetime(2026, 5, 22, 12, 0)) is True
+
+
+def test_heartbeat_due_when_stale():
+    assert rr.heartbeat_due("2026-05-10 12:00:00", datetime(2026, 5, 22, 12, 0)) is True
+
+
+def test_heartbeat_not_due_when_fresh():
+    assert rr.heartbeat_due("2026-05-21 12:00:00", datetime(2026, 5, 22, 12, 0)) is False
+
+
+def test_heartbeat_due_when_unparseable():
+    assert rr.heartbeat_due("garbage", datetime(2026, 5, 22, 12, 0)) is True
+
+
 def test_manifest_plan_skips_session_with_existing_row():
     now = datetime(2026, 5, 22, 12, 0)
     sessions = [_manifest_session("Montreal", "R", datetime(2026, 5, 24, 18, 0),
