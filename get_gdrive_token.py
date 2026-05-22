@@ -22,7 +22,10 @@ import os
 import sys
 
 CLIENT_FILE = "client_secret.json"
-SCOPES = ["https://www.googleapis.com/auth/drive"]
+SCOPES = [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/spreadsheets",
+]
 
 
 def main():

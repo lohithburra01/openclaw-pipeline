@@ -570,11 +570,11 @@ def openf1_find_session(year, gp, kind):
     raise RuntimeError(f"OpenF1: no {target} session found for {year} {gp}")
 
 
-def get_drive_service():
-    """Authenticated Google Drive v3 client, using the GDRIVE_* env vars."""
+def get_google_credentials():
+    """Refreshed Google OAuth credentials from the GDRIVE_* env vars. The
+    refresh token must carry both the Drive and Spreadsheets scopes."""
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
-    from googleapiclient.discovery import build
 
     creds = Credentials(
         token=None,
@@ -584,15 +584,34 @@ def get_drive_service():
         token_uri="https://oauth2.googleapis.com/token",
     )
     creds.refresh(Request())
-    return build("drive", "v3", credentials=creds)
+    return creds
+
+
+def get_drive_service():
+    """Authenticated Google Drive v3 client."""
+    from googleapiclient.discovery import build
+    return build("drive", "v3", credentials=get_google_credentials())
+
+
+def get_sheets_service():
+    """Authenticated Google Sheets v4 client."""
+    from googleapiclient.discovery import build
+    return build("sheets", "v4", credentials=get_google_credentials())
+
+
+def drive_find_file(service, folder_id, filename):
+    """Return the id of a non-trashed file named `filename` in the folder,
+    or None if there is no such file."""
+    safe = filename.replace("\\", "\\\\").replace("'", "\\'")
+    query = f"name = '{safe}' and '{folder_id}' in parents and trashed = false"
+    resp = service.files().list(q=query, fields="files(id,name)").execute()
+    files = resp.get("files", [])
+    return files[0]["id"] if files else None
 
 
 def drive_has_file(service, folder_id, filename):
     """True if a non-trashed file named `filename` exists in the folder."""
-    safe = filename.replace("\\", "\\\\").replace("'", "\\'")
-    query = f"name = '{safe}' and '{folder_id}' in parents and trashed = false"
-    resp = service.files().list(q=query, fields="files(id,name)").execute()
-    return len(resp.get("files", [])) > 0
+    return drive_find_file(service, folder_id, filename) is not None
 
 
 def drive_upload_file(service, folder_id, path):
