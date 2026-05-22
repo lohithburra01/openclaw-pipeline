@@ -570,9 +570,20 @@ def openf1_find_session(year, gp, kind):
     raise RuntimeError(f"OpenF1: no {target} session found for {year} {gp}")
 
 
+_GOOGLE_CREDS = None
+
+
 def get_google_credentials():
     """Refreshed Google OAuth credentials from the GDRIVE_* env vars. The
-    refresh token must carry both the Drive and Spreadsheets scopes."""
+    refresh token must carry both the Drive and Spreadsheets scopes.
+
+    The refreshed credentials are cached for the process lifetime: a single
+    producer run is far shorter than the token's validity, so Drive and
+    Sheets clients built in the same run share one token refresh."""
+    global _GOOGLE_CREDS
+    if _GOOGLE_CREDS is not None:
+        return _GOOGLE_CREDS
+
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
 
@@ -584,6 +595,7 @@ def get_google_credentials():
         token_uri="https://oauth2.googleapis.com/token",
     )
     creds.refresh(Request())
+    _GOOGLE_CREDS = creds
     return creds
 
 
