@@ -9,16 +9,11 @@ on:
         default: ''
   schedule:
     # === BEGIN AUTO-MANAGED CRON (edited by quali_replay.py) ===
-    - cron: "0 0 23 5 *"
     - cron: "0 12 * * 3"
     - cron: "0 23 23 5 *"
     - cron: "15 22 23 5 *"
-    - cron: "15 23 22 5 *"
     - cron: "30 0 24 5 *"
     - cron: "30 21 23 5 *"
-    - cron: "30 22 22 5 *"
-    - cron: "45 0 23 5 *"
-    - cron: "45 21 22 5 *"
     - cron: "45 23 23 5 *"
     # === END AUTO-MANAGED CRON ===
 
