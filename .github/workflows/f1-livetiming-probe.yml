@@ -11,26 +11,41 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Probe F1 livetiming static endpoints from GH runner
-        run: |
-          probe() {
-            local label="$1"; local url="$2"
-            local code size
-            code=$(curl -sS -A "Mozilla/5.0" -o /tmp/out.bin \
-              -w "%{http_code} %{size_download}" --max-time 30 "$url" || echo "ERR ERR")
-            echo "| $label | $code |" >> "$GITHUB_STEP_SUMMARY"
-          }
-          {
-            echo "## F1 livetiming probe — from GH Actions runner"
-            echo "Runner public IP: $(curl -sS --max-time 10 https://ifconfig.me || echo unknown)"
-            echo ""
-            echo "| Endpoint | http_code size_bytes |"
-            echo "|---|---|"
-          } >> "$GITHUB_STEP_SUMMARY"
+      - name: 'runner public IP'
+        run: curl -sS --max-time 10 https://ifconfig.me && echo
 
-          probe "season Index.json (2024)" "https://livetiming.formula1.com/static/2024/Index.json"
-          probe "session Index.json (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json"
-          probe "CarData.z.jsonStream (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream"
-          probe "Position.z.jsonStream (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream"
-          probe "DriverList.json (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json"
-          probe "season Index.json (2026, current)" "https://livetiming.formula1.com/static/2026/Index.json"
+      - name: 'probe 200 season 2024 Index'
+        run: |
+          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json")
+          echo "got $code"; [ "$code" = "200" ]
+
+      - name: 'probe 200 Monaco-2024-Q session Index'
+        run: |
+          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json")
+          echo "got $code"; [ "$code" = "200" ]
+
+      - name: 'probe 200 Monaco-2024-Q CarData (telemetry)'
+        run: |
+          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 60 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream")
+          echo "got $code"; [ "$code" = "200" ]
+
+      - name: 'probe 200 Monaco-2024-Q Position (track xy)'
+        run: |
+          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 60 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream")
+          echo "got $code"; [ "$code" = "200" ]
+
+      - name: 'probe 200 Monaco-2024-Q DriverList'
+        run: |
+          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json")
+          echo "got $code"; [ "$code" = "200" ]
+
+      - name: 'probe 200 season 2026 Index (current)'
+        run: |
+          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2026/Index.json")
+          echo "got $code"; [ "$code" = "200" ]
