@@ -1,16 +1,16 @@
 """F1 qualifying-replay pipeline.
 
-Produces a 40-second top-3 lap-comparison video for each Qualifying and Sprint
-Qualifying session of the season. Drops it in the same Google Drive folder the
-race pipeline uses, named ``{location}_{year}_Q.mp4`` or
-``{location}_{year}_SQ.mp4`` (the suffix distinguishes Saturday Qualifying from
-Friday Sprint Qualifying on sprint weekends).
+Renders a 40-second top-3 lap-comparison video after every Qualifying and
+Sprint Qualifying of the season, and uploads it to the same Google Drive
+folder the race pipeline uses. Filename: ``{location}_{year}_Q.mp4`` or
+``{location}_{year}_SQ.mp4``.
 
-Mirrors ``race_replay.py`` on the main branch in structure: same OpenF1 source,
-same Drive secrets, same self-scheduling cron-rewriting trick, same retry slots.
-Visual engine is ported from ``render.py`` (HiFi delta + spline track map +
-chasing cars) but the data layer is OpenF1, not FastF1, so it works on a CI
-runner. No manifest involvement.
+Self-scheduling like ``race_replay.py``: the script rewrites its own GitHub
+Actions cron block from the F1 calendar on every run.
+
+Data source: **FastF1** (which wraps F1's official livetiming.formula1.com
+static feed). Free, no auth, works on GitHub Actions runners. No OpenF1, no
+API keys, no live-session gate.
 """
 
 import argparse
@@ -20,8 +20,6 @@ import re
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import cv2
@@ -39,7 +37,7 @@ SPRINT_QUALI_END_BUFFER_MIN = 60     # SQ ~45 min + cooldown
 RETRY_OFFSETS_MIN = [15, 60, 105, 150, 195]
 LOOKAHEAD_DAYS = 9
 RENDER_LOOKBACK_HOURS = 6
-WEEKLY_SAFETY_CRON = "0 12 * * 3"     # Wednesday self-heal tick
+WEEKLY_SAFETY_CRON = "0 12 * * 3"
 DURATION_SECONDS = 40
 FPS = 30
 TOP_N = 3
@@ -50,14 +48,14 @@ WORKFLOW_PATH = os.path.join(".github", "workflows", "quali_replay.yml")
 CRON_BEGIN = "# === BEGIN AUTO-MANAGED CRON (edited by quali_replay.py) ==="
 CRON_END = "# === END AUTO-MANAGED CRON ==="
 OUTPUT_DIR = "output"
-OPENF1_BASE = "https://api.openf1.org/v1"
+FF1_CACHE = os.environ.get("FF1_CACHE", "/tmp/ff1cache")
 
 
 # ============================================================
 # TEAM COLOURS (kept in sync with race_replay.py)
 # ============================================================
 def get_constructor_color(team_name):
-    """Dynamic team name -> strict 2026 hex colour. Anything unknown -> grey."""
+    """Dynamic team name -> strict 2026 hex colour. Unknown -> grey."""
     team_name = str(team_name).lower()
     if 'red bull' in team_name and 'racing bulls' not in team_name and 'rb' not in team_name:
         return '#3671C6'
@@ -85,137 +83,91 @@ def hex_to_bgr(hex_col):
 
 
 # ============================================================
-# OPENF1 HTTP CLIENT (same retry policy as race_replay.py)
+# FASTF1 SETUP
 # ============================================================
-def openf1_get(path, retries=5):
-    """GET an OpenF1 endpoint; return the parsed JSON list. Retries on 429/5xx."""
-    url = f"{OPENF1_BASE}/{path}"
-    req = urllib.request.Request(url, headers={"User-Agent": "quali-replay"})
-    for attempt in range(retries):
-        try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                return json.load(resp)
-        except urllib.error.HTTPError as exc:
-            if exc.code in (429, 500, 502, 503, 504) and attempt < retries - 1:
-                wait = 10 * (attempt + 1)
-                print(f"  OpenF1 returned {exc.code}; retrying in {wait}s...")
-                time.sleep(wait)
-                continue
-            raise
-
-
-def _iso_to_posix(iso_str):
-    return datetime.fromisoformat(iso_str).timestamp()
+def _ff1_setup():
+    """Idempotently enable FastF1's HTTP cache."""
+    import fastf1
+    os.makedirs(FF1_CACHE, exist_ok=True)
+    try:
+        fastf1.Cache.enable_cache(FF1_CACHE)
+    except Exception:
+        pass
 
 
 # ============================================================
-# OPENF1 -> TRACE EXTRACTION
+# FASTF1 -> PER-DRIVER TRACE
 # ============================================================
-def pick_top_drivers(session_key, top_n=TOP_N):
-    """Return the top-N driver_numbers by fastest single lap in the session.
+def get_clean_trace(session, driver_code):
+    """Extract the fastest-lap trace for one driver from a loaded FastF1
+    session. Mirrors the user's original notebook script.
 
-    The three fastest laps in a Qualifying session always come from Q3, and
-    likewise for SQ3 in a Sprint Qualifying. So 'fastest lap per driver,
-    sort ascending, take top N' gives the Q3/SQ3 shootout participants in
-    finishing order, with no need for the (newer, less stable)
-    ``session_result`` endpoint.
-    """
-    laps = openf1_get(f"laps?session_key={session_key}")
-    fastest_per_drv = {}
-    for l in laps:
-        dur = l.get("lap_duration")
-        if dur is None:
-            continue
-        dn = l["driver_number"]
-        if dn not in fastest_per_drv or dur < fastest_per_drv[dn]:
-            fastest_per_drv[dn] = dur
-    ranked = sorted(fastest_per_drv.items(), key=lambda kv: kv[1])
-    return [dn for dn, _ in ranked[:top_n]]
-
-
-def build_driver_trace(session_key, driver_number, driver_info):
-    """Build a fastest-lap trace dict for one driver from OpenF1.
-
-    Returns a dict with keys ``dist`` (m), ``speed`` (m/s), ``time`` (s,
+    Returns dict with keys ``dist`` (m), ``speed`` (m/s), ``time`` (s,
     lap-relative), ``x``, ``y``, ``lap_time``, ``driver``, ``team_color``,
-    or ``None`` if telemetry is missing/insufficient.
+    or ``None`` if the driver has no usable telemetry on their fastest lap.
     """
-    laps = [
-        l for l in openf1_get(
-            f"laps?session_key={session_key}&driver_number={driver_number}"
-        )
-        if l.get("lap_duration") is not None
-    ]
-    if not laps:
-        return None
-    fastest = min(laps, key=lambda l: l["lap_duration"])
-    lap_start_iso = fastest["date_start"]
-    lap_dur = float(fastest["lap_duration"])
-    end_dt = datetime.fromisoformat(lap_start_iso) + timedelta(seconds=lap_dur + 1.0)
-    end_iso = end_dt.isoformat()
+    import pandas as pd
+    try:
+        laps = session.laps.pick_driver(driver_code)
+        if laps.empty:
+            return None
+        lap = laps.pick_fastest()
+        if lap is None or pd.isna(lap.get("LapTime")):
+            return None
+        tel = lap.get_telemetry().dropna(subset=["Distance", "Speed", "X", "Y"])
+        tel = tel.drop_duplicates(subset=["Time"])
+        if len(tel) < 10:
+            return None
 
-    cd = openf1_get(
-        f"car_data?session_key={session_key}&driver_number={driver_number}"
-        f"&date>={lap_start_iso}&date<={end_iso}"
-    )
-    loc = openf1_get(
-        f"location?session_key={session_key}&driver_number={driver_number}"
-        f"&date>={lap_start_iso}&date<={end_iso}"
-    )
-    if not cd or not loc:
-        return None
+        dist = tel["Distance"].values.astype(float)
+        dist = dist - dist[0]
 
-    cd.sort(key=lambda r: r["date"])
-    loc.sort(key=lambda r: r["date"])
-
-    lap_start = _iso_to_posix(lap_start_iso)
-    cd_t = np.array([_iso_to_posix(r["date"]) - lap_start for r in cd], dtype=float)
-    cd_v = np.array([(r.get("speed") or 0.0) / 3.6 for r in cd], dtype=float)  # km/h -> m/s
-    loc_t = np.array([_iso_to_posix(r["date"]) - lap_start for r in loc], dtype=float)
-    loc_x = np.array([(r.get("x") or 0.0) for r in loc], dtype=float) / 10.0
-    loc_y = np.array([(r.get("y") or 0.0) for r in loc], dtype=float) / 10.0
-
-    # Keep car_data only within the location time span so interpolation never
-    # extrapolates a position from a single endpoint sample.
-    valid = (cd_t >= loc_t[0]) & (cd_t <= loc_t[-1])
-    cd_t = cd_t[valid]; cd_v = cd_v[valid]
-    if len(cd_t) < 10:
+        team = str(lap.get("Team", "") or "")
+        return {
+            "dist": dist,
+            "speed": tel["Speed"].values.astype(float) / 3.6,
+            "time": tel["Time"].dt.total_seconds().values.astype(float),
+            "x": tel["X"].values.astype(float) / 10.0,
+            "y": tel["Y"].values.astype(float) / 10.0,
+            "lap_time": lap["LapTime"].total_seconds(),
+            "driver": str(driver_code),
+            "team_color": get_constructor_color(team),
+        }
+    except Exception as exc:
+        print(f"  WARN: get_clean_trace({driver_code}) failed: {exc}")
         return None
 
-    x = np.interp(cd_t, loc_t, loc_x)
-    y = np.interp(cd_t, loc_t, loc_y)
 
-    # OpenF1 occasionally emits same-timestamp duplicates; drop them.
-    _, uniq = np.unique(cd_t, return_index=True)
-    uniq.sort()
-    cd_t = cd_t[uniq]; cd_v = cd_v[uniq]; x = x[uniq]; y = y[uniq]
+def load_quali_traces(year, event, kind, top_n=TOP_N):
+    """Load the FastF1 session and return top-N fastest qualifiers' traces,
+    ordered fastest first. The fastest lap per driver is used: the three
+    fastest laps in a Qualifying session are by construction Q3 laps."""
+    import fastf1
+    import pandas as pd
+    _ff1_setup()
+    session_id = "SQ" if kind == "SQ" else "Q"
+    session = fastf1.get_session(year, event, session_id)
+    session.load(telemetry=True, laps=True, weather=False, messages=False)
+    if session.laps.empty:
+        raise RuntimeError(f"FastF1: empty laps for {year} {event} {session_id}")
 
-    dt = np.diff(cd_t, prepend=cd_t[0])
-    dist = np.cumsum(cd_v * dt)
-    dist = dist - dist[0]
+    fastest_per_drv = {}
+    for drv in session.drivers:
+        d_laps = session.laps.pick_driver(drv)
+        if d_laps.empty:
+            continue
+        f = d_laps.pick_fastest()
+        if f is None or pd.isna(f.get("LapTime")):
+            continue
+        code = str(f["Driver"])
+        fastest_per_drv[code] = f["LapTime"].total_seconds()
 
-    return {
-        "dist": dist,
-        "speed": cd_v,
-        "time": cd_t,
-        "x": x,
-        "y": y,
-        "lap_time": lap_dur,
-        "driver": driver_info.get("name_acronym") or f"#{driver_number}",
-        "team_color": get_constructor_color(driver_info.get("team_name", "")),
-    }
-
-
-def load_quali_traces(session_key, top_n=TOP_N):
-    """Top-N fastest qualifiers, each as a complete trace, ordered fastest first."""
-    drivers = openf1_get(f"drivers?session_key={session_key}")
-    drv_by_num = {d["driver_number"]: d for d in drivers}
-    top_nums = pick_top_drivers(session_key, top_n=top_n)
+    ranked = sorted(fastest_per_drv.items(), key=lambda kv: kv[1])[:top_n]
     traces = []
-    for rank, dn in enumerate(top_nums, start=1):
-        tr = build_driver_trace(session_key, dn, drv_by_num.get(dn, {}))
+    for rank, (code, _) in enumerate(ranked, start=1):
+        tr = get_clean_trace(session, code)
         if tr is None:
-            print(f"  WARN: skipping driver {dn} (no usable telemetry)")
+            print(f"  WARN: skipping {code} (no usable telemetry on fastest lap)")
             continue
         tr["rank"] = rank
         traces.append(tr)
@@ -223,7 +175,7 @@ def load_quali_traces(session_key, top_n=TOP_N):
 
 
 # ============================================================
-# HIFI DELTA ENGINE (copied verbatim from render.py)
+# HIFI DELTA ENGINE (verbatim from render.py / formulytics notebook)
 # ============================================================
 def calculate_hifi_delta(ref_trace, tgt_trace):
     """Distance-aligned, residual-corrected time delta between two laps."""
@@ -278,10 +230,9 @@ def calculate_hifi_delta(ref_trace, tgt_trace):
 
 
 # ============================================================
-# VIDEO BAKER
+# VIDEO BAKER (HiFi spline track + chasing cars + leaderboard)
 # ============================================================
 def _load_fonts():
-    """Load the Formula1 font family from CWD; fall back to PIL default."""
     bold = "Formula1-Bold_web_0.ttf.ttf"
     reg = "Formula1-Regular_web_0.ttf.ttf"
     if not (os.path.exists(bold) and os.path.exists(reg)):
@@ -311,12 +262,7 @@ def _draw_centered(draw, x, y, text, font, fill):
 def bake_quali_video(traces, location, year, session_label, out_path,
                      duration_seconds=DURATION_SECONDS, fps=FPS,
                      zoom_factor=ZOOM_FACTOR, trail_frames=TRAIL_FRAMES):
-    """Render a top-N lap-comparison video to ``out_path``.
-
-    ``traces`` is ordered fastest-first; the first trace is the reference (its
-    location samples define the track spline; its lap is the timing baseline).
-    The entire lap is compressed into ``duration_seconds`` of wall-clock video
-    by sampling sim-time as a fraction of the slowest aligned lap end."""
+    """Render top-N lap-comparison video. Fastest driver = reference."""
     if not traces:
         raise RuntimeError("no traces to render")
     ref = traces[0]
@@ -341,7 +287,6 @@ def bake_quali_video(traces, location, year, session_label, out_path,
             delta_fns[uid] = interp1d(ref['dist'], fd, fill_value="extrapolate")
         time_mappings[uid] = np.maximum.accumulate(mapped)
 
-    # Track spline from the reference driver's centred (x,y).
     ref_x = ref['x'] - np.mean(ref['x'])
     ref_y = ref['y'] - np.mean(ref['y'])
     coords = np.stack([ref_x, ref_y], axis=1)
@@ -400,7 +345,6 @@ def bake_quali_video(traces, location, year, session_label, out_path,
         if f % (fps * 5) == 0:
             print(f"    frame {f}/{total_frames}")
 
-        # Compress the full aligned lap into duration_seconds.
         sim_t = (f / max(1, total_frames - 1)) * max_real_time
 
         current_dist = {}
@@ -455,7 +399,6 @@ def bake_quali_video(traces, location, year, session_label, out_path,
         _draw_centered(draw, WIDTH // 2, 250, title1, fonts["title"], (255, 0, 50))
         _draw_centered(draw, WIDTH // 2, 300, title2, fonts["sub"], (200, 200, 200))
 
-        # Car-tag labels (driver code on a black background, near the car)
         for tr in draw_order:
             uid = tr['driver']
             sx, sy = world_to_screen(*get_pos(current_dist[uid] / master_len), cam_x, cam_y)
@@ -472,7 +415,6 @@ def bake_quali_video(traces, location, year, session_label, out_path,
             )
             _draw_centered(draw, sx, ly, name, fonts["car"], (255, 255, 255))
 
-        # Leaderboard panel (sorted by who is furthest along the lap)
         sorted_by_pos = sorted(traces, key=lambda tr: current_dist[tr['driver']], reverse=True)
         for i, tr in enumerate(sorted_by_pos):
             uid = tr['driver']
@@ -506,7 +448,7 @@ def bake_quali_video(traces, location, year, session_label, out_path,
 
 
 # ============================================================
-# SCHEDULING & ORCHESTRATION (mirrors race_replay.py / main branch)
+# SCHEDULING & ORCHESTRATION
 # ============================================================
 def session_kind_for(name):
     if name == "Qualifying": return "Q"
@@ -535,31 +477,41 @@ def cron_for_datetime(dt):
 
 
 def output_slug(event_name, year, kind):
-    """Stable output filename, e.g. 'monaco_2026_Q.mp4', 'miami_2026_SQ.mp4'."""
-    base = re.sub(r"[^a-z0-9]+", "_", event_name.lower()).strip("_")
+    """Stable output filename, e.g. 'monaco_2026_Q.mp4'."""
+    base = re.sub(r"[^a-z0-9]+", "_", str(event_name).lower()).strip("_")
     return f"{base}_{year}_{kind}.mp4"
 
 
 def load_event_schedule(season):
-    return openf1_get(f"sessions?year={season}")
+    """Return the FastF1 event-schedule DataFrame for a season."""
+    import fastf1
+    _ff1_setup()
+    return fastf1.get_event_schedule(season)
 
 
-def list_sessions(sessions_json):
-    """OpenF1 sessions JSON list -> list of Qualifying / Sprint Qualifying dicts."""
+def list_sessions(schedule):
+    """FastF1 event-schedule DataFrame -> list of Q / SQ session dicts."""
+    import pandas as pd
     out = []
-    for s in sessions_json:
-        kind = session_kind_for(s.get("session_name"))
-        if kind is None:
-            continue
-        start = (datetime.fromisoformat(s["date_start"])
-                 .astimezone(timezone.utc).replace(tzinfo=None))
-        out.append({
-            "event": s.get("location") or s.get("circuit_short_name"),
-            "kind": kind,
-            "start": start,
-            "end": session_end_time(start, kind),
-            "session_key": int(s["session_key"]),
-        })
+    for _, ev in schedule.iterrows():
+        for n in range(1, 6):
+            name = ev.get(f"Session{n}")
+            date = ev.get(f"Session{n}DateUtc")
+            if pd.isna(name) or pd.isna(date):
+                continue
+            kind = session_kind_for(name)
+            if kind is None:
+                continue
+            start = pd.Timestamp(date).to_pydatetime()
+            if start.tzinfo is not None:
+                start = start.astimezone(timezone.utc).replace(tzinfo=None)
+            event_label = ev.get("Location") or ev.get("EventName") or ""
+            out.append({
+                "event": str(event_label),
+                "kind": kind,
+                "start": start,
+                "end": session_end_time(start, kind),
+            })
     return out
 
 
@@ -605,32 +557,21 @@ def rewrite_cron_block(workflow_text, cron_lines):
     return f"{head}{block}\n    {tail}"
 
 
-def session_has_data(session_key):
+def session_has_data(year, event, kind):
+    """Cheap readiness check via FastF1; True if non-empty laps available."""
     try:
-        return len(openf1_get(f"laps?session_key={session_key}")) > 0
+        import fastf1
+        _ff1_setup()
+        s = fastf1.get_session(year, event, "SQ" if kind == "SQ" else "Q")
+        s.load(telemetry=False, laps=True, weather=False, messages=False)
+        return not s.laps.empty
     except Exception as exc:
-        print(f"  OpenF1 laps not ready for session {session_key}: {exc}")
+        print(f"  FastF1 data not ready for {year} {event} {kind}: {exc}")
         return False
 
 
-def openf1_find_session(year, gp, kind):
-    """Resolve a (year, gp-name, Q/SQ) to (session_key, canonical location)."""
-    target = "Sprint Qualifying" if kind == "SQ" else "Qualifying"
-    gp_l = gp.lower()
-    for s in openf1_get(f"sessions?year={year}"):
-        if s.get("session_name") != target:
-            continue
-        hay = " ".join(
-            str(s.get(k, "")).lower()
-            for k in ("location", "circuit_short_name", "country_name")
-        )
-        if any(w in hay for w in gp_l.split()):
-            return int(s["session_key"]), s.get("location") or s.get("circuit_short_name")
-    raise RuntimeError(f"OpenF1: no {target} session found for {year} {gp}")
-
-
 # ============================================================
-# GOOGLE DRIVE (same OAuth pattern as race_replay.py)
+# GOOGLE DRIVE
 # ============================================================
 _GOOGLE_CREDS = None
 
@@ -676,16 +617,13 @@ def drive_upload_file(service, folder_id, path):
 
 
 def commit_and_push(path, message):
-    """Commit a single file and push. Only acts inside GitHub Actions."""
     if os.environ.get("GITHUB_ACTIONS") != "true":
         print(f"  (local run) would commit and push {path}")
         return
     subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
     subprocess.run(
         ["git", "config", "user.email",
-         "41898282+github-actions[bot]@users.noreply.github.com"],
-        check=True,
-    )
+         "41898282+github-actions[bot]@users.noreply.github.com"], check=True)
     subprocess.run(["git", "add", path], check=True)
     subprocess.run(["git", "commit", "-m", message], check=True)
     subprocess.run(["git", "pull", "--rebase"], check=True)
@@ -694,15 +632,13 @@ def commit_and_push(path, message):
 
 
 # ============================================================
-# CLI ARGS
+# CLI
 # ============================================================
 def parse_force_session(text):
-    """'2024 Monaco Q' -> (year, event, kind). Event name may contain spaces."""
+    """'2024 Monaco Q' -> (year, event, kind)."""
     parts = text.split()
     if len(parts) < 3:
-        raise SystemExit(
-            '--force-session must be "YEAR EVENT KIND", e.g. "2024 Monaco Q"'
-        )
+        raise SystemExit('--force-session must be "YEAR EVENT KIND", e.g. "2024 Monaco Q"')
     year = int(parts[0])
     kind = parts[-1].upper()
     if kind not in ("Q", "SQ"):
@@ -711,11 +647,7 @@ def parse_force_session(text):
     return year, event, kind
 
 
-# ============================================================
-# PHASES
-# ============================================================
 def reschedule(now, dry_run=False):
-    """Phase 1: rewrite the workflow's cron block from the F1 calendar."""
     sessions = list_sessions(load_event_schedule(SEASON))
     cron_lines = build_cron_lines(sessions, now)
     print("Cron block to apply:")
@@ -736,18 +668,17 @@ def reschedule(now, dry_run=False):
     print("Schedule updated.")
 
 
-def render_one(session_key, location, year, kind, out_path):
-    print(f"  fetching top-{TOP_N} traces from OpenF1...")
-    traces = load_quali_traces(session_key, top_n=TOP_N)
+def render_one(year, event, kind, out_path):
+    print(f"  fetching top-{TOP_N} traces via FastF1...")
+    traces = load_quali_traces(year, event, kind, top_n=TOP_N)
     if len(traces) < 2:
         raise RuntimeError(
             f"only {len(traces)} traces available — need at least 2 for a comparison"
         )
-    bake_quali_video(traces, location, year, session_label_for(kind), out_path)
+    bake_quali_video(traces, event, year, session_label_for(kind), out_path)
 
 
 def render_due(now):
-    """Phase 2: render any just-ended Quali/SQ session not already in Drive."""
     sessions = list_sessions(load_event_schedule(SEASON))
     candidates = due_sessions(sessions, now)
     if not candidates:
@@ -762,24 +693,24 @@ def render_due(now):
         if drive_has_file(service, folder, slug):
             print(f"  ALREADY_RENDERED ({slug})")
             continue
-        if not session_has_data(s["session_key"]):
+        if not session_has_data(SEASON, s["event"], s["kind"]):
             print(f"  DATA_NOT_READY ({s['event']} {s['kind']})")
             continue
         out_path = os.path.join(OUTPUT_DIR, slug)
         try:
-            render_one(s["session_key"], s["event"], SEASON, s["kind"], out_path)
+            render_one(SEASON, s["event"], s["kind"], out_path)
         except Exception as exc:
             print(f"  RENDER_ERROR ({slug}): {exc}")
             continue
-        file_id = drive_upload_file(service, folder, out_path)
-        print(f"  UPLOADED ({slug}, drive id {file_id})")
+        try:
+            file_id = drive_upload_file(service, folder, out_path)
+            print(f"  UPLOADED ({slug}, drive id {file_id})")
+        except Exception as exc:
+            print(f"  UPLOAD_ERROR ({slug}): {exc}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
 def main():
-    parser = argparse.ArgumentParser(description="F1 qualifying-replay pipeline")
+    parser = argparse.ArgumentParser(description="F1 qualifying-replay pipeline (FastF1)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the cron block without writing or committing")
     parser.add_argument("--force-session", metavar="SPEC",
@@ -791,20 +722,18 @@ def main():
 
     if args.force_session:
         year, event, kind = parse_force_session(args.force_session)
-        sk, loc = openf1_find_session(year, event, kind)
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        out_path = os.path.join(OUTPUT_DIR, output_slug(loc, year, kind))
-        render_one(sk, loc, year, kind, out_path)
+        out_path = os.path.join(OUTPUT_DIR, output_slug(event, year, kind))
+        render_one(year, event, kind, out_path)
         print(f"Rendered {out_path}")
         return
 
     if args.test_session:
         year, event, kind = parse_force_session(args.test_session)
-        sk, loc = openf1_find_session(year, event, kind)
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        out_path = os.path.join(OUTPUT_DIR, "TEST_" + output_slug(loc, year, kind))
-        print(f"=== END-TO-END TEST: {loc} {kind} ({year}) ===")
-        render_one(sk, loc, year, kind, out_path)
+        out_path = os.path.join(OUTPUT_DIR, "TEST_" + output_slug(event, year, kind))
+        print(f"=== END-TO-END TEST: {event} {kind} ({year}) ===")
+        render_one(year, event, kind, out_path)
         try:
             service = get_drive_service()
             folder = os.environ["GDRIVE_FOLDER_ID"]
