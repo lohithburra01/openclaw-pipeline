@@ -9,58 +9,58 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: 'PASS-if-200 minimal-UA'
+      - name: 'season-2024 Index'
         continue-on-error: true
         run: |
           c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
             "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'PASS-if-200 browser-headers'
-        continue-on-error: true
-        run: |
-          c=$(curl -sS \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-            -H "Accept: */*" -H "Accept-Language: en-US,en;q=0.9" \
-            -H "Referer: https://www.formula1.com/" \
-            -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
-
-      - name: 'PASS-if-200 no-UA'
-        continue-on-error: true
-        run: |
-          c=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
-
-      - name: 'PASS-if-200 curl-default-UA'
-        continue-on-error: true
-        run: |
-          c=$(curl -sS -H "User-Agent: curl/8.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
-
-      - name: 'PASS-if-200 fastf1-UA'
-        continue-on-error: true
-        run: |
-          c=$(curl -sS -H "User-Agent: fastf1" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
-
-      - name: 'PASS-if-redirect-or-200 root'
+      - name: 'session-Index Monaco-2024-Q'
         continue-on-error: true
         run: |
           c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/"); echo "code=$c"; [ "$c" = "200" ] || [ "$c" = "301" ] || [ "$c" = "302" ]
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json"); echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'commit results so we can read them back'
-        if: always()
+      - name: 'DriverList Monaco-2024-Q'
+        continue-on-error: true
         run: |
-          mkdir -p _probe
-          {
-            echo "# F1 livetiming probe results (run ${{ github.run_id }})"
-            echo "Runner IP: $(curl -sS --max-time 10 https://ifconfig.me)"
-            echo ""
-            for label in minimal browser none curldefault fastfua root; do
-              true # placeholder so the step has content; the actual codes are encoded in prior step conclusions
-            done
-          } > _probe/results.txt
-          echo "(see step conclusions above)" >> _probe/results.txt
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json"); echo "code=$c"; [ "$c" = "200" ]
+
+      - name: 'TimingData Monaco-2024-Q'
+        continue-on-error: true
+        run: |
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 60 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/TimingData.jsonStream"); echo "code=$c"; [ "$c" = "200" ]
+
+      - name: 'CarData-HEAVY Monaco-2024-Q (3.4MB telemetry)'
+        continue-on-error: true
+        run: |
+          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/cd.bin -w "%{http_code} bytes=%{size_download}" --max-time 90 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream"); echo "$c"; echo "$c" | grep -q "^200"
+
+      - name: 'Position-HEAVY Monaco-2024-Q (3.5MB xy)'
+        continue-on-error: true
+        run: |
+          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/pos.bin -w "%{http_code} bytes=%{size_download}" --max-time 90 \
+            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream"); echo "$c"; echo "$c" | grep -q "^200"
+
+      - name: 'season-2026 Index (current season)'
+        continue-on-error: true
+        run: |
+          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/idx26.json -w "%{http_code} bytes=%{size_download}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2026/Index.json"); echo "$c"; echo "$c" | grep -q "^200"
+          # Also peek at what 2026 paths look like for Canada
+          python3 -c "
+import json
+with open('/tmp/idx26.json','rb') as f:
+    raw = f.read().lstrip(b'\xef\xbb\xbf').decode()
+data = json.loads(raw)
+for m in data.get('Meetings', []):
+    if 'Canad' in m.get('Name','') or 'ontr' in m.get('Location',''):
+        print('Meeting:', m['Name'], '/', m.get('Location'))
+        for s in m.get('Sessions', []):
+            print(f'  {s[\"Name\"]:25} Path={s[\"Path\"]}')
+" || true
