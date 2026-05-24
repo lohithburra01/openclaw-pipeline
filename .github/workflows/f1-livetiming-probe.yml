@@ -11,56 +11,47 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: 'season-2024 Index'
+      - name: 'A season-2024 Index'
         continue-on-error: true
         run: |
-          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 "https://livetiming.formula1.com/static/2024/Index.json")
+          echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'session-Index Monaco-2024-Q'
+      - name: 'B session-Index Monaco-2024-Q'
         continue-on-error: true
         run: |
-          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json"); echo "code=$c"; [ "$c" = "200" ]
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json")
+          echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'DriverList Monaco-2024-Q'
+      - name: 'C DriverList Monaco-2024-Q'
         continue-on-error: true
         run: |
-          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json"); echo "code=$c"; [ "$c" = "200" ]
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json")
+          echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'TimingData Monaco-2024-Q'
+      - name: 'D TimingData Monaco-2024-Q'
         continue-on-error: true
         run: |
-          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 60 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/TimingData.jsonStream"); echo "code=$c"; [ "$c" = "200" ]
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 60 "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/TimingData.jsonStream")
+          echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'CarData-HEAVY Monaco-2024-Q (3.4MB telemetry)'
+      - name: 'E CarData-HEAVY Monaco-2024-Q (3.4MB telemetry)'
         continue-on-error: true
         run: |
-          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/cd.bin -w "%{http_code} bytes=%{size_download}" --max-time 90 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream"); echo "$c"; echo "$c" | grep -q "^200"
+          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/cd.bin -w "%{http_code}_bytes=%{size_download}" --max-time 90 "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream")
+          echo "result=$c"
+          echo "$c" | grep -q "^200"
 
-      - name: 'Position-HEAVY Monaco-2024-Q (3.5MB xy)'
+      - name: 'F Position-HEAVY Monaco-2024-Q (3.5MB xy)'
         continue-on-error: true
         run: |
-          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/pos.bin -w "%{http_code} bytes=%{size_download}" --max-time 90 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream"); echo "$c"; echo "$c" | grep -q "^200"
+          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/pos.bin -w "%{http_code}_bytes=%{size_download}" --max-time 90 "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream")
+          echo "result=$c"
+          echo "$c" | grep -q "^200"
 
-      - name: 'season-2026 Index (current season)'
+      - name: 'G season-2026 Index (current season)'
         continue-on-error: true
         run: |
-          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/idx26.json -w "%{http_code} bytes=%{size_download}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2026/Index.json"); echo "$c"; echo "$c" | grep -q "^200"
-          # Also peek at what 2026 paths look like for Canada
-          python3 -c "
-import json
-with open('/tmp/idx26.json','rb') as f:
-    raw = f.read().lstrip(b'\xef\xbb\xbf').decode()
-data = json.loads(raw)
-for m in data.get('Meetings', []):
-    if 'Canad' in m.get('Name','') or 'ontr' in m.get('Location',''):
-        print('Meeting:', m['Name'], '/', m.get('Location'))
-        for s in m.get('Sessions', []):
-            print(f'  {s[\"Name\"]:25} Path={s[\"Path\"]}')
-" || true
+          c=$(curl -sS -A "Mozilla/5.0" -o /tmp/idx26.json -w "%{http_code}_bytes=%{size_download}" --max-time 30 "https://livetiming.formula1.com/static/2026/Index.json")
+          echo "result=$c"
+          echo "$c" | grep -q "^200"
