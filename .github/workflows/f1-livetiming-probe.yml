@@ -14,38 +14,52 @@ jobs:
       - name: 'runner public IP'
         run: curl -sS --max-time 10 https://ifconfig.me && echo
 
-      - name: 'probe 200 season 2024 Index'
+      - name: 'minimal UA -> name encodes the http code'
         run: |
-          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+          code=$(curl -sS -A "Mozilla/5.0" -o /tmp/r1 -w "%{http_code}" --max-time 30 \
             "https://livetiming.formula1.com/static/2024/Index.json")
-          echo "got $code"; [ "$code" = "200" ]
+          echo "Minimal-UA response code: $code"
+          echo "First 200 bytes of body:"
+          head -c 200 /tmp/r1 || true
+          echo
+          # exit 0 always so we get all probes
+          true
 
-      - name: 'probe 200 Monaco-2024-Q session Index'
+      - name: 'browser-like headers'
         run: |
-          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json")
-          echo "got $code"; [ "$code" = "200" ]
+          code=$(curl -sS \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: */*" \
+            -H "Accept-Language: en-US,en;q=0.9" \
+            -H "Referer: https://www.formula1.com/" \
+            -H "Origin: https://www.formula1.com" \
+            -o /tmp/r2 -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json")
+          echo "Browser-headers response code: $code"
+          head -c 200 /tmp/r2 || true
+          echo
+          true
 
-      - name: 'probe 200 Monaco-2024-Q CarData (telemetry)'
+      - name: 'no UA at all'
         run: |
-          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 60 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream")
-          echo "got $code"; [ "$code" = "200" ]
+          code=$(curl -sS -o /tmp/r3 -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json")
+          echo "No-UA response code: $code"
+          head -c 200 /tmp/r3 || true
+          echo
+          true
 
-      - name: 'probe 200 Monaco-2024-Q Position (track xy)'
+      - name: 'curl default UA'
         run: |
-          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 60 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream")
-          echo "got $code"; [ "$code" = "200" ]
+          code=$(curl -sS -o /tmp/r4 -w "%{http_code}" --max-time 30 -H "User-Agent: curl/8.0" \
+            "https://livetiming.formula1.com/static/2024/Index.json")
+          echo "curl-UA response code: $code"
+          head -c 200 /tmp/r4 || true
+          echo
+          true
 
-      - name: 'probe 200 Monaco-2024-Q DriverList'
+      - name: 'TLS handshake / direct IP probe (rule out network)'
         run: |
-          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json")
-          echo "got $code"; [ "$code" = "200" ]
-
-      - name: 'probe 200 season 2026 Index (current)'
-        run: |
-          code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2026/Index.json")
-          echo "got $code"; [ "$code" = "200" ]
+          curl -sI --max-time 15 "https://livetiming.formula1.com/" || true
+          echo "---"
+          dig +short livetiming.formula1.com | head -5
