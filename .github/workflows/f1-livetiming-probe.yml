@@ -11,55 +11,56 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: 'runner public IP'
-        run: curl -sS --max-time 10 https://ifconfig.me && echo
-
-      - name: 'minimal UA -> name encodes the http code'
+      - name: 'PASS-if-200 minimal-UA'
+        continue-on-error: true
         run: |
-          code=$(curl -sS -A "Mozilla/5.0" -o /tmp/r1 -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json")
-          echo "Minimal-UA response code: $code"
-          echo "First 200 bytes of body:"
-          head -c 200 /tmp/r1 || true
-          echo
-          # exit 0 always so we get all probes
-          true
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'browser-like headers'
+      - name: 'PASS-if-200 browser-headers'
+        continue-on-error: true
         run: |
-          code=$(curl -sS \
+          c=$(curl -sS \
             -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-            -H "Accept: */*" \
-            -H "Accept-Language: en-US,en;q=0.9" \
+            -H "Accept: */*" -H "Accept-Language: en-US,en;q=0.9" \
             -H "Referer: https://www.formula1.com/" \
-            -H "Origin: https://www.formula1.com" \
-            -o /tmp/r2 -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json")
-          echo "Browser-headers response code: $code"
-          head -c 200 /tmp/r2 || true
-          echo
-          true
+            -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'no UA at all'
+      - name: 'PASS-if-200 no-UA'
+        continue-on-error: true
         run: |
-          code=$(curl -sS -o /tmp/r3 -w "%{http_code}" --max-time 30 \
-            "https://livetiming.formula1.com/static/2024/Index.json")
-          echo "No-UA response code: $code"
-          head -c 200 /tmp/r3 || true
-          echo
-          true
+          c=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'curl default UA'
+      - name: 'PASS-if-200 curl-default-UA'
+        continue-on-error: true
         run: |
-          code=$(curl -sS -o /tmp/r4 -w "%{http_code}" --max-time 30 -H "User-Agent: curl/8.0" \
-            "https://livetiming.formula1.com/static/2024/Index.json")
-          echo "curl-UA response code: $code"
-          head -c 200 /tmp/r4 || true
-          echo
-          true
+          c=$(curl -sS -H "User-Agent: curl/8.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
 
-      - name: 'TLS handshake / direct IP probe (rule out network)'
+      - name: 'PASS-if-200 fastf1-UA'
+        continue-on-error: true
         run: |
-          curl -sI --max-time 15 "https://livetiming.formula1.com/" || true
-          echo "---"
-          dig +short livetiming.formula1.com | head -5
+          c=$(curl -sS -H "User-Agent: fastf1" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2024/Index.json"); echo "code=$c"; [ "$c" = "200" ]
+
+      - name: 'PASS-if-redirect-or-200 root'
+        continue-on-error: true
+        run: |
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/"); echo "code=$c"; [ "$c" = "200" ] || [ "$c" = "301" ] || [ "$c" = "302" ]
+
+      - name: 'commit results so we can read them back'
+        if: always()
+        run: |
+          mkdir -p _probe
+          {
+            echo "# F1 livetiming probe results (run ${{ github.run_id }})"
+            echo "Runner IP: $(curl -sS --max-time 10 https://ifconfig.me)"
+            echo ""
+            for label in minimal browser none curldefault fastfua root; do
+              true # placeholder so the step has content; the actual codes are encoded in prior step conclusions
+            done
+          } > _probe/results.txt
+          echo "(see step conclusions above)" >> _probe/results.txt
