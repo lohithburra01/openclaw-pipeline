@@ -13,40 +13,24 @@ jobs:
     steps:
       - name: Probe F1 livetiming static endpoints from GH runner
         run: |
-          set -x
-          echo "=== runner IP geolocation hint ==="
-          curl -sS --max-time 10 https://ifconfig.me || true
-          echo
-          echo "=== probe 1: season index (Index.json for 2024) ==="
-          curl -sS -A "Mozilla/5.0" -o /tmp/idx.json \
-            -w "HTTP=%{http_code}\nSIZE=%{size_download}\nTIME=%{time_total}s\n" \
-            "https://livetiming.formula1.com/static/2024/Index.json"
-          echo "first 300 bytes:"
-          head -c 300 /tmp/idx.json || true
-          echo
-          echo "=== probe 2: session folder index (Monaco 2024 Q) ==="
-          curl -sS -A "Mozilla/5.0" -o /tmp/sess.json \
-            -w "HTTP=%{http_code}\nSIZE=%{size_download}\nTIME=%{time_total}s\n" \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json"
-          head -c 300 /tmp/sess.json || true
-          echo
-          echo "=== probe 3: heavy data file (CarData.z.jsonStream Monaco Q 2024) ==="
-          curl -sS -A "Mozilla/5.0" -o /tmp/cd.bin \
-            -w "HTTP=%{http_code}\nSIZE=%{size_download}\nTIME=%{time_total}s\n" \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream"
-          echo "first 200 bytes (likely zlib chunks):"
-          head -c 200 /tmp/cd.bin | xxd | head -10 || true
-          echo
-          echo "=== probe 4: Position.z.jsonStream Monaco Q 2024 ==="
-          curl -sS -A "Mozilla/5.0" -o /tmp/pos.bin \
-            -w "HTTP=%{http_code}\nSIZE=%{size_download}\nTIME=%{time_total}s\n" \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream"
-          echo
-          echo "=== probe 5: DriverList.json ==="
-          curl -sS -A "Mozilla/5.0" -o /tmp/drv.json \
-            -w "HTTP=%{http_code}\nSIZE=%{size_download}\nTIME=%{time_total}s\n" \
-            "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json"
-          head -c 300 /tmp/drv.json || true
-          echo
-          echo "=== conclusion ==="
-          echo "If all five probes returned HTTP=200 with non-trivial SIZE, livetiming.formula1.com is open from this runner."
+          probe() {
+            local label="$1"; local url="$2"
+            local code size
+            code=$(curl -sS -A "Mozilla/5.0" -o /tmp/out.bin \
+              -w "%{http_code} %{size_download}" --max-time 30 "$url" || echo "ERR ERR")
+            echo "| $label | $code |" >> "$GITHUB_STEP_SUMMARY"
+          }
+          {
+            echo "## F1 livetiming probe — from GH Actions runner"
+            echo "Runner public IP: $(curl -sS --max-time 10 https://ifconfig.me || echo unknown)"
+            echo ""
+            echo "| Endpoint | http_code size_bytes |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          probe "season Index.json (2024)" "https://livetiming.formula1.com/static/2024/Index.json"
+          probe "session Index.json (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Index.json"
+          probe "CarData.z.jsonStream (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/CarData.z.jsonStream"
+          probe "Position.z.jsonStream (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/Position.z.jsonStream"
+          probe "DriverList.json (Monaco 2024 Q)" "https://livetiming.formula1.com/static/2024/2024-05-26_Monaco_Grand_Prix/2024-05-25_Qualifying/DriverList.json"
+          probe "season Index.json (2026, current)" "https://livetiming.formula1.com/static/2026/Index.json"
