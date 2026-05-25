@@ -467,6 +467,162 @@ def load_quali_traces_raw(year, event, kind, top_n=3):
     return traces
 
 
+def _extract_stints_for_driver(app_data_stream, driver_number):
+    """Accumulate TimingAppData stint updates into a per-driver stint list.
+
+    Stints arrive as *incremental* updates indexed by stint number
+    (``{"1": {"TotalLaps": 31}}`` etc.), so we merge field-by-field across
+    the whole stream rather than overwriting.
+
+    Returns ordered list: ``[{'compound': 'MEDIUM', 'start_lap': 1,
+    'end_lap': 26}, {'compound': 'HARD', 'start_lap': 27, 'end_lap': 57}]``.
+    Race-lap ranges are derived from cumulative ``TotalLaps``; the
+    ``StartLaps`` field on individual stints refers to laps-on-the-tire,
+    not race lap, so it's ignored.
+    """
+    dn = str(driver_number)
+    acc = {}  # stint_idx -> merged dict
+    for _ts, rec in app_data_stream:
+        lines = rec.get("Lines")
+        if not isinstance(lines, dict):
+            continue
+        line = lines.get(dn)
+        if not isinstance(line, dict):
+            continue
+        st = line.get("Stints")
+        if st is None:
+            continue
+        if isinstance(st, list):
+            for i, stint in enumerate(st):
+                if isinstance(stint, dict):
+                    acc.setdefault(i, {}).update(stint)
+        elif isinstance(st, dict):
+            for k, stint in st.items():
+                if not isinstance(stint, dict):
+                    continue
+                try:
+                    idx = int(k)
+                except (TypeError, ValueError):
+                    continue
+                acc.setdefault(idx, {}).update(stint)
+
+    stints = []
+    cur_lap = 1
+    for _idx, info in sorted(acc.items(), key=lambda kv: kv[0]):
+        comp = info.get("Compound")
+        total = info.get("TotalLaps", 0)
+        try:
+            total = int(total)
+        except (TypeError, ValueError):
+            total = 0
+        if not comp:
+            cur_lap += max(0, total)
+            continue
+        # If TotalLaps is 0 (stint in progress with no completed laps yet),
+        # treat end_lap as unbounded — the next stint, if any, will fence it.
+        end_lap = cur_lap + total - 1 if total > 0 else 10**9
+        stints.append({
+            "compound": str(comp).upper(),
+            "start_lap": cur_lap,
+            "end_lap": end_lap,
+        })
+        cur_lap = end_lap + 1 if total > 0 else cur_lap
+    return stints
+
+
+def _compound_for_lap(stints, lap_number):
+    """Return the compound covering ``lap_number`` from a stints list."""
+    for s in stints:
+        e = s["end_lap"] if s["end_lap"] is not None else 10**9
+        if s["start_lap"] <= lap_number <= e:
+            return s["compound"]
+    return "UNKNOWN"
+
+
+def load_race_traces_raw(year, event, kind):
+    """Per-driver lap history for race_replay's position-vs-laps chart.
+
+    Returns ``(d_data, total_laps, num_drivers, global_start, global_end)``
+    in the same shape the existing renderer consumes. Times are stream-
+    relative seconds (renderer only uses deltas).
+    """
+    import numpy as np
+
+    session = find_session(year, event, kind)
+    drivers = get_driver_list(session["path"])
+    timing = get_timing_data_stream(session["path"])
+    app_data = get_timing_app_data_stream(session["path"])
+
+    # Walk the timing stream once, accumulating per-driver state.
+    state = {dn: {"cur_n": 0, "last_pos": None, "laps": []} for dn in drivers.keys()}
+
+    for ts, rec in timing:
+        lines = rec.get("Lines")
+        if not isinstance(lines, dict):
+            continue
+        for dn, line in lines.items():
+            if dn not in state or not isinstance(line, dict):
+                continue
+            p = line.get("Position")
+            if p:
+                try:
+                    state[dn]["last_pos"] = int(p)
+                except (TypeError, ValueError):
+                    pass
+            n = line.get("NumberOfLaps")
+            if isinstance(n, int) and n > state[dn]["cur_n"]:
+                state[dn]["cur_n"] = n
+                state[dn]["laps"].append({
+                    "lap": n,
+                    "ts": ts,
+                    "pos": state[dn]["last_pos"],
+                })
+
+    d_data = {}
+    global_end = 0.0
+    total_laps = 0
+
+    for dn, st in state.items():
+        if not st["laps"]:
+            continue
+        info = drivers.get(dn) or {}
+        code = info.get("Tla") or f"#{dn}"
+        team = info.get("TeamName", "")
+        stints = _extract_stints_for_driver(app_data, dn)
+
+        # Carry-forward fix for any None positions: use the next/previous known
+        positions_raw = [l["pos"] for l in st["laps"]]
+        last_known = None
+        for i, p in enumerate(positions_raw):
+            if p is None:
+                positions_raw[i] = last_known if last_known is not None else 1
+            else:
+                last_known = p
+
+        first_pos = positions_raw[0]
+        compounds = [_compound_for_lap(stints, l["lap"]) for l in st["laps"]]
+
+        times = np.insert(np.array([l["ts"] for l in st["laps"]], dtype=float), 0, 0.0)
+        laps_arr = np.insert(np.array([l["lap"] for l in st["laps"]], dtype=float), 0, 0.0)
+        pos_arr = np.insert(np.array(positions_raw, dtype=float), 0, first_pos)
+        comp_arr = np.insert(np.array(compounds, dtype=object), 0, compounds[0])
+
+        d_data[code] = {
+            "laps": laps_arr,
+            "pos": pos_arr,
+            "times": times,
+            "compounds": comp_arr,
+            "color": _quick_team_color(team),
+            "max_time": float(st["laps"][-1]["ts"]),
+        }
+        global_end = max(global_end, st["laps"][-1]["ts"])
+        total_laps = max(total_laps, st["laps"][-1]["lap"])
+
+    if not d_data:
+        raise RuntimeError(f"No usable lap data for {year} {event} {kind}")
+    return d_data, int(total_laps), len(d_data), 0.0, global_end
+
+
 def _quick_team_color(team_name):
     """Inline 2026 team-colour table for quick use in this module."""
     t = (team_name or "").lower()
