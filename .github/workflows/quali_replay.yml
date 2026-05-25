@@ -76,7 +76,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "Formulytics quali producer run failed"
-          to: info@formula-neon.com
+          to: lohithburra01@gmail.com
           from: Formulytics Pipeline <${{ secrets.SMTP_USERNAME }}>
           body: |
             The quali-replay producer workflow failed.

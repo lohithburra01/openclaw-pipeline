@@ -98,7 +98,7 @@ SMTP_PASSWORD            Gmail app password
 
 ## What to do if something fails
 
-Both pipelines email `info@formula-neon.com` on failure with a direct
+Both pipelines email `lohithburra01@gmail.com` on failure with a direct
 link to the failed Actions run. The most common failure modes:
 
 1. **F1's livetiming endpoint returns 5xx / times out.** Transient. The
