@@ -1,0 +1,70 @@
+name: Raw Pipeline Smoke
+
+on:
+  push:
+    paths:
+      - '.github/workflows/raw-pipeline-smoke.yml'
+      - 'f1_livetiming.py'
+      - 'race_replay.py'
+      - 'quali_replay.py'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -q opencv-python-headless pillow numpy scipy
+
+      - name: 'A raw parser unit-ish — fetch + parse + extract top-3 traces'
+        run: |
+          python -c "
+          import f1_livetiming as ft
+          # Use a completed past session — Miami 2026 R is finished
+          d_data, total_laps, n_drv, gs, ge = ft.load_race_traces_for(2026, 'Miami', 'R')
+          assert total_laps > 50, f'expected >50 laps, got {total_laps}'
+          assert n_drv >= 18, f'expected >=18 drivers, got {n_drv}'
+          assert ge > 3600, f'expected >1h race duration, got {ge}s'
+          print(f'race loader ok: {total_laps} laps, {n_drv} drivers, {ge:.0f}s')
+
+          traces = ft.load_quali_traces_for(2026, 'Montr', 'Q', top_n=3)
+          assert len(traces) == 3, f'expected 3 traces, got {len(traces)}'
+          for t in traces:
+              assert 60 < t['lap_time'] < 100, f'unrealistic lap_time {t[\"lap_time\"]} for {t[\"driver\"]}'
+              assert len(t['time']) > 100, f'too few samples for {t[\"driver\"]}'
+              assert t['dist'][-1] > 3000, f'unrealistic distance for {t[\"driver\"]}'
+          print(f'quali loader ok: top3 = {[(t[\"driver\"], round(t[\"lap_time\"], 3)) for t in traces]}')
+          "
+
+      - name: 'B render a short quali video on the runner'
+        run: |
+          python quali_replay.py --force-session "2026 Montr Q" 2>&1 | tail -5
+          ls -la output/
+          test -s output/montr_2026_Q.mp4
+          # File should be at least 5 MB for a 40s 1080x1920 render
+          test "$(stat -c%s output/montr_2026_Q.mp4)" -gt 5000000
+
+      - name: 'C render a short race video on the runner'
+        run: |
+          python race_replay.py --force-session "2026 Miami R" --duration 5 2>&1 | tail -5
+          ls -la output/
+          test -s output/miami_2026_R.mp4
+          test "$(stat -c%s output/miami_2026_R.mp4)" -gt 3000000
+
+      - name: 'D upload artifacts (for visual inspection if anything looks wrong)'
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-pipeline-smoke-mp4s
+          path: output/*.mp4
+          retention-days: 3
+          if-no-files-found: ignore
