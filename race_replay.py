@@ -14,6 +14,8 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 
+import f1_livetiming as ft
+
 SEASON = int(os.environ.get("RACE_SEASON", datetime.utcnow().year))
 RACE_END_BUFFER_MIN = 135       # race counted as "ended" 2h15m after start
 SPRINT_END_BUFFER_MIN = 75      # sprint counted as "ended" 1h15m after start
@@ -28,7 +30,6 @@ WORKFLOW_PATH = os.path.join(".github", "workflows", "race_replay.yml")
 CRON_BEGIN = "# === BEGIN AUTO-MANAGED CRON (edited by race_replay.py) ==="
 CRON_END = "# === END AUTO-MANAGED CRON ==="
 OUTPUT_DIR = "output"
-FF1_CACHE = os.environ.get("FF1_CACHE", "/tmp/ff1cache")
 
 # --- CORE CONFIGURATION ---
 GLOBAL_SCALE = 0.90
@@ -90,94 +91,22 @@ def load_fonts(base_size):
 
 
 # ============================================================
-# FASTF1 DATA LAYER
+# DATA LAYER — delegates to f1_livetiming (raw livetiming.formula1.com)
 # ============================================================
-def _ff1_setup():
-    """Idempotently enable FastF1's HTTP cache (kept inside FF1_CACHE)."""
-    import fastf1
-    os.makedirs(FF1_CACHE, exist_ok=True)
-    try:
-        fastf1.Cache.enable_cache(FF1_CACHE)
-    except Exception:
-        pass
-
-
 def load_fastf1_race(year, event, kind):
-    """Build per-driver render data from FastF1 for one race/sprint session.
+    """Per-driver lap history from the raw F1 livetiming feed.
 
-    Returns (d_data, total_laps, num_drivers, global_start, global_end). The
-    shape matches the previous OpenF1-backed loader so the renderer doesn't
-    need to change. Times are seconds since session start (relative; the
-    renderer only cares about deltas)."""
-    import fastf1
-    import pandas as pd
-    _ff1_setup()
-    session = fastf1.get_session(year, event, kind)
-    session.load(telemetry=False, laps=True, weather=False, messages=False)
-    if session.laps.empty:
-        raise RuntimeError(f"FastF1: empty laps for {year} {event} {kind}")
-
-    d_data = {}
-    global_start = 0.0
-    global_end = 0.0
-    total_laps = 0
-
-    for drv in session.drivers:
-        drv_laps = session.laps.pick_driver(drv).sort_values("LapNumber")
-        if drv_laps.empty:
-            continue
-        code = str(drv_laps.iloc[0]["Driver"])
-        team = str(drv_laps.iloc[0].get("Team", "") or "")
-
-        lap_nums, lap_ends, positions, compounds = [], [], [], []
-        for _, lap in drv_laps.iterrows():
-            lst = lap.get("LapStartTime")
-            ltime = lap.get("LapTime")
-            if pd.isna(lst) or pd.isna(ltime):
-                continue
-            end_s = (lst + ltime).total_seconds()
-            lap_nums.append(int(lap["LapNumber"]))
-            lap_ends.append(end_s)
-            pos = lap.get("Position")
-            positions.append(int(pos) if not pd.isna(pos) else (positions[-1] if positions else 1))
-            comp = lap.get("Compound")
-            compounds.append(str(comp) if not pd.isna(comp) else "UNKNOWN")
-        if not lap_ends:
-            continue
-
-        first_pos = positions[0]
-        first_comp = compounds[0]
-        times = np.insert(np.array(lap_ends, dtype=float), 0, 0.0)
-        laps_arr = np.insert(np.array(lap_nums, dtype=float), 0, 0.0)
-        pos_arr = np.insert(np.array(positions, dtype=float), 0, first_pos)
-        comp_arr = np.insert(np.array(compounds, dtype=object), 0, first_comp)
-
-        try:
-            color = get_constructor_color(team)
-        except Exception:
-            color = "#888888"
-
-        d_data[code] = {
-            "laps": laps_arr,
-            "pos": pos_arr,
-            "times": times,
-            "compounds": comp_arr,
-            "color": color,
-            "max_time": lap_ends[-1],
-        }
-        global_end = max(global_end, lap_ends[-1])
-        total_laps = max(total_laps, max(lap_nums))
-
-    if not d_data:
-        raise RuntimeError(f"FastF1: no usable lap data for {year} {event} {kind}")
-    return d_data, int(total_laps), len(d_data), global_start, global_end
+    Returns (d_data, total_laps, num_drivers, global_start, global_end) in
+    the shape the renderer expects. Times are race-relative seconds (the
+    loader internally shifts so lap 0 sits at t=0)."""
+    return ft.load_race_traces_for(year, event, kind)
 
 
 def create_race_timelapse(event, year=2026, kind='R',
                           save_path='output.mp4', duration=30, fps=60, portrait=True,
                           session_label='RACE'):
 
-    print(f"Loading FastF1 data for {year} {event} {kind}...")
+    print(f"Loading raw livetiming data for {year} {event} {kind}...")
     d_data, total_laps, total_drivers, global_start_time, global_end_time = load_fastf1_race(year, event, kind)
 
     canvas_w, canvas_h = (1080, 1920) if portrait else (1920, 1080)
@@ -403,39 +332,24 @@ def output_slug(event_name, year, kind):
 
 
 def load_event_schedule(season):
-    """Return the FastF1 event-schedule DataFrame for a season."""
-    import fastf1
-    _ff1_setup()
-    return fastf1.get_event_schedule(season)
+    """Season's R/S/Q/SQ sessions from the raw F1 livetiming Index."""
+    return ft.list_season_sessions(season)
 
 
 def list_sessions(schedule):
-    """FastF1 event-schedule DataFrame -> list of race/sprint session dicts.
-
-    Each event has up to 5 sessions (Session1..Session5). We only keep ones
-    named exactly 'Race' or 'Sprint' so things like 'Sprint Shootout' /
-    'Sprint Qualifying' are ignored (those belong to quali_replay.py)."""
-    import pandas as pd
+    """Filter to Race + Sprint only (quali handled by quali_replay.py)."""
     sessions = []
-    for _, ev in schedule.iterrows():
-        for n in range(1, 6):
-            name = ev.get(f"Session{n}")
-            date = ev.get(f"Session{n}DateUtc")
-            if pd.isna(name) or pd.isna(date):
-                continue
-            if name not in ("Race", "Sprint"):
-                continue
-            kind = "S" if name == "Sprint" else "R"
-            start = pd.Timestamp(date).to_pydatetime()
-            if start.tzinfo is not None:
-                start = start.astimezone(timezone.utc).replace(tzinfo=None)
-            event_label = ev.get("Location") or ev.get("EventName") or ""
-            sessions.append({
-                "event": str(event_label),
-                "kind": kind,
-                "start": start,
-                "end": session_end_time(start, kind),
-            })
+    for s in schedule:
+        if s["kind"] not in ("R", "S"):
+            continue
+        start = s["start_utc"]
+        sessions.append({
+            "event": s["event"],
+            "kind": s["kind"],
+            "start": start,
+            "end": session_end_time(start, s["kind"]),
+            "path": s["path"],
+        })
     return sessions
 
 
@@ -489,18 +403,13 @@ def rewrite_cron_block(workflow_text, cron_lines):
 
 
 def session_has_data(year, event, kind):
-    """Cheap readiness check: try to load lap data; True if non-empty.
-
-    Returns False on any exception so the cron retries on a later slot
-    rather than the workflow crashing."""
+    """Cheap readiness check via the raw livetiming feed."""
     try:
-        import fastf1
-        _ff1_setup()
-        s = fastf1.get_session(year, event, kind)
-        s.load(telemetry=False, laps=True, weather=False, messages=False)
-        return not s.laps.empty
+        session = ft.find_session(year, event, kind)
+        td = ft.get_timing_data_stream(session["path"])
+        return len(td) > 100
     except Exception as exc:
-        print(f"  FastF1 data not ready for {year} {event} {kind}: {exc}")
+        print(f"  data not ready for {year} {event} {kind}: {exc}")
         return False
 
 
@@ -655,7 +564,7 @@ def render_due(now):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="F1 race-replay pipeline (FastF1)")
+    parser = argparse.ArgumentParser(description="F1 race-replay pipeline (raw livetiming)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the cron block without writing or committing")
     parser.add_argument("--force-session", metavar="SPEC",

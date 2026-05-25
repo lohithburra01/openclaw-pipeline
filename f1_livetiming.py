@@ -416,22 +416,21 @@ def lap_trace_for_driver(car_data_stream, position_stream,
     }
 
 
-def load_quali_traces_raw(year, event, kind, top_n=3):
+def load_quali_traces_raw(session_path, top_n=3):
     """Top-N qualifiers' fastest-lap traces, ready to feed the renderer.
 
-    Returns a list of trace dicts (see ``lap_trace_for_driver``) extended
-    with ``driver`` (TLA) and ``team_color`` (hex). Ordered fastest first.
-    Uses only the raw livetiming static feed — no FastF1, no OpenF1.
+    ``session_path`` is the static-folder path. Returns a list of trace
+    dicts (see ``lap_trace_for_driver``) extended with ``driver`` (TLA),
+    ``team_color`` (hex), and ``rank`` (1..N). Ordered fastest first.
+
+    Pure raw-feed — no FastF1, no OpenF1.
     """
     from datetime import timedelta
 
-    session = find_session(year, event, kind)
-    print(f"  resolved: {session['path']}")
-
-    drivers = get_driver_list(session["path"])
-    timing = get_timing_data_stream(session["path"])
-    car_data = get_car_data_stream(session["path"])
-    position = get_position_stream(session["path"])
+    drivers = get_driver_list(session_path)
+    timing = get_timing_data_stream(session_path)
+    car_data = get_car_data_stream(session_path)
+    position = get_position_stream(session_path)
     print(f"  drivers={len(drivers)}  timing={len(timing)}  car_data={len(car_data)}  position={len(position)}")
 
     anchor = broadcast_utc_start(car_data)
@@ -465,6 +464,12 @@ def load_quali_traces_raw(year, event, kind, top_n=3):
         tr["team_color"] = _quick_team_color(team)
         traces.append(tr)
     return traces
+
+
+def load_quali_traces_for(year, event, kind, top_n=3):
+    """Convenience: resolve session by (year, event, kind) and load it."""
+    session = find_session(year, event, kind)
+    return load_quali_traces_raw(session["path"], top_n=top_n)
 
 
 def _extract_stints_for_driver(app_data_stream, driver_number):
@@ -539,19 +544,23 @@ def _compound_for_lap(stints, lap_number):
     return "UNKNOWN"
 
 
-def load_race_traces_raw(year, event, kind):
+def load_race_traces_raw(session_path):
     """Per-driver lap history for race_replay's position-vs-laps chart.
 
+    ``session_path`` is the static-folder path, e.g.
+    ``'2026/2026-05-03_Miami_Grand_Prix/2026-05-03_Race/'``.
+
     Returns ``(d_data, total_laps, num_drivers, global_start, global_end)``
-    in the same shape the existing renderer consumes. Times are stream-
-    relative seconds (renderer only uses deltas).
+    in the same shape the existing renderer consumes. Times are race-
+    relative seconds: the broadcast-relative timestamps from TimingData
+    are shifted so lap 0 sits at t=0 and the first lap completion sits at
+    a small positive offset (no minutes of pre-race dead air).
     """
     import numpy as np
 
-    session = find_session(year, event, kind)
-    drivers = get_driver_list(session["path"])
-    timing = get_timing_data_stream(session["path"])
-    app_data = get_timing_app_data_stream(session["path"])
+    drivers = get_driver_list(session_path)
+    timing = get_timing_data_stream(session_path)
+    app_data = get_timing_app_data_stream(session_path)
 
     # Walk the timing stream once, accumulating per-driver state.
     state = {dn: {"cur_n": 0, "last_pos": None, "laps": []} for dn in drivers.keys()}
@@ -619,8 +628,34 @@ def load_race_traces_raw(year, event, kind):
         total_laps = max(total_laps, st["laps"][-1]["lap"])
 
     if not d_data:
-        raise RuntimeError(f"No usable lap data for {year} {event} {kind}")
+        raise RuntimeError(f"No usable lap data for {session_path}")
+
+    # Shift so race start sits near t=0 (otherwise the first ~3000s are
+    # pre-race broadcast coverage and the chart shows empty time).
+    first_lap_ends = [dd["times"][1] for dd in d_data.values() if len(dd["times"]) > 1]
+    if first_lap_ends:
+        # Estimate typical lap time from spacing between subsequent lap ends.
+        deltas = []
+        for dd in d_data.values():
+            t = dd["times"]
+            if len(t) >= 3:
+                deltas.extend((t[i + 1] - t[i]) for i in range(1, min(6, len(t) - 1)))
+        typical_lap = float(np.median(deltas)) if deltas else 90.0
+        offset = max(0.0, min(first_lap_ends) - typical_lap)
+        if offset > 0:
+            for dd in d_data.values():
+                shifted = dd["times"] - offset
+                shifted[0] = 0.0  # keep lap-0 marker at race start
+                dd["times"] = shifted
+                dd["max_time"] = float(shifted[-1])
+            global_end -= offset
     return d_data, int(total_laps), len(d_data), 0.0, global_end
+
+
+def load_race_traces_for(year, event, kind):
+    """Convenience: resolve session by (year, event, kind) and load it."""
+    session = find_session(year, event, kind)
+    return load_race_traces_raw(session["path"])
 
 
 def _quick_team_color(team_name):
