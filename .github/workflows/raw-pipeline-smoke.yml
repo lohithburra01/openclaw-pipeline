@@ -101,17 +101,27 @@ jobs:
           " 2>&1 | tee logs/a6.log
           exit ${PIPESTATUS[0]}
 
-      - name: 'B render quali (40s)'
+      - name: 'B render quali (40s) — strict'
         continue-on-error: true
         run: |
+          set -o pipefail
           python quali_replay.py --force-session "2026 Montr Q" 2>&1 | tee logs/b.log
           ls -la output/ 2>&1 | tee -a logs/b.log
+          test -s output/montr_2026_Q.mp4
+          sz=$(stat -c%s output/montr_2026_Q.mp4)
+          echo "quali mp4 = $sz bytes"
+          test "$sz" -gt 5000000
 
-      - name: 'C render race short (5s)'
+      - name: 'C render race short (5s) — strict'
         continue-on-error: true
         run: |
+          set -o pipefail
           python race_replay.py --force-session "2026 Miami R" --duration 5 2>&1 | tee logs/c.log
           ls -la output/ 2>&1 | tee -a logs/c.log
+          test -s output/miami_2026_R.mp4
+          sz=$(stat -c%s output/miami_2026_R.mp4)
+          echo "race mp4 = $sz bytes"
+          test "$sz" -gt 3000000
 
       - name: 'upload logs + MP4s for inspection'
         if: always()
