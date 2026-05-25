@@ -8,9 +8,10 @@ folder the race pipeline uses. Filename: ``{location}_{year}_Q.mp4`` or
 Self-scheduling like ``race_replay.py``: the script rewrites its own GitHub
 Actions cron block from the F1 calendar on every run.
 
-Data source: **FastF1** (which wraps F1's official livetiming.formula1.com
-static feed). Free, no auth, works on GitHub Actions runners. No OpenF1, no
-API keys, no live-session gate.
+Data source: **F1's official livetiming.formula1.com static feed**, parsed
+directly via the local ``f1_livetiming`` module (stdlib only — urllib +
+json + zlib + base64). No FastF1, no OpenF1, no API keys, no live-session
+gate.
 """
 
 import argparse
@@ -27,6 +28,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from scipy.interpolate import interp1d, splprep, splev
 from scipy.signal import correlate, medfilt
+
+import f1_livetiming as ft
 
 # ============================================================
 # CONFIGURATION
@@ -48,7 +51,6 @@ WORKFLOW_PATH = os.path.join(".github", "workflows", "quali_replay.yml")
 CRON_BEGIN = "# === BEGIN AUTO-MANAGED CRON (edited by quali_replay.py) ==="
 CRON_END = "# === END AUTO-MANAGED CRON ==="
 OUTPUT_DIR = "output"
-FF1_CACHE = os.environ.get("FF1_CACHE", "/tmp/ff1cache")
 
 
 # ============================================================
@@ -83,95 +85,11 @@ def hex_to_bgr(hex_col):
 
 
 # ============================================================
-# FASTF1 SETUP
+# DATA LAYER — delegates to f1_livetiming (raw livetiming.formula1.com)
 # ============================================================
-def _ff1_setup():
-    """Idempotently enable FastF1's HTTP cache."""
-    import fastf1
-    os.makedirs(FF1_CACHE, exist_ok=True)
-    try:
-        fastf1.Cache.enable_cache(FF1_CACHE)
-    except Exception:
-        pass
-
-
-# ============================================================
-# FASTF1 -> PER-DRIVER TRACE
-# ============================================================
-def get_clean_trace(session, driver_code):
-    """Extract the fastest-lap trace for one driver from a loaded FastF1
-    session. Mirrors the user's original notebook script.
-
-    Returns dict with keys ``dist`` (m), ``speed`` (m/s), ``time`` (s,
-    lap-relative), ``x``, ``y``, ``lap_time``, ``driver``, ``team_color``,
-    or ``None`` if the driver has no usable telemetry on their fastest lap.
-    """
-    import pandas as pd
-    try:
-        laps = session.laps.pick_driver(driver_code)
-        if laps.empty:
-            return None
-        lap = laps.pick_fastest()
-        if lap is None or pd.isna(lap.get("LapTime")):
-            return None
-        tel = lap.get_telemetry().dropna(subset=["Distance", "Speed", "X", "Y"])
-        tel = tel.drop_duplicates(subset=["Time"])
-        if len(tel) < 10:
-            return None
-
-        dist = tel["Distance"].values.astype(float)
-        dist = dist - dist[0]
-
-        team = str(lap.get("Team", "") or "")
-        return {
-            "dist": dist,
-            "speed": tel["Speed"].values.astype(float) / 3.6,
-            "time": tel["Time"].dt.total_seconds().values.astype(float),
-            "x": tel["X"].values.astype(float) / 10.0,
-            "y": tel["Y"].values.astype(float) / 10.0,
-            "lap_time": lap["LapTime"].total_seconds(),
-            "driver": str(driver_code),
-            "team_color": get_constructor_color(team),
-        }
-    except Exception as exc:
-        print(f"  WARN: get_clean_trace({driver_code}) failed: {exc}")
-        return None
-
-
 def load_quali_traces(year, event, kind, top_n=TOP_N):
-    """Load the FastF1 session and return top-N fastest qualifiers' traces,
-    ordered fastest first. The fastest lap per driver is used: the three
-    fastest laps in a Qualifying session are by construction Q3 laps."""
-    import fastf1
-    import pandas as pd
-    _ff1_setup()
-    session_id = "SQ" if kind == "SQ" else "Q"
-    session = fastf1.get_session(year, event, session_id)
-    session.load(telemetry=True, laps=True, weather=False, messages=False)
-    if session.laps.empty:
-        raise RuntimeError(f"FastF1: empty laps for {year} {event} {session_id}")
-
-    fastest_per_drv = {}
-    for drv in session.drivers:
-        d_laps = session.laps.pick_driver(drv)
-        if d_laps.empty:
-            continue
-        f = d_laps.pick_fastest()
-        if f is None or pd.isna(f.get("LapTime")):
-            continue
-        code = str(f["Driver"])
-        fastest_per_drv[code] = f["LapTime"].total_seconds()
-
-    ranked = sorted(fastest_per_drv.items(), key=lambda kv: kv[1])[:top_n]
-    traces = []
-    for rank, (code, _) in enumerate(ranked, start=1):
-        tr = get_clean_trace(session, code)
-        if tr is None:
-            print(f"  WARN: skipping {code} (no usable telemetry on fastest lap)")
-            continue
-        tr["rank"] = rank
-        traces.append(tr)
-    return traces
+    """Top-N fastest qualifiers' traces from the raw F1 livetiming feed."""
+    return ft.load_quali_traces_for(year, event, kind, top_n=top_n)
 
 
 # ============================================================
@@ -483,35 +401,24 @@ def output_slug(event_name, year, kind):
 
 
 def load_event_schedule(season):
-    """Return the FastF1 event-schedule DataFrame for a season."""
-    import fastf1
-    _ff1_setup()
-    return fastf1.get_event_schedule(season)
+    """Season's R/S/Q/SQ sessions from the raw F1 livetiming Index."""
+    return ft.list_season_sessions(season)
 
 
 def list_sessions(schedule):
-    """FastF1 event-schedule DataFrame -> list of Q / SQ session dicts."""
-    import pandas as pd
+    """Filter to Q + SQ sessions (renderer only cares about these)."""
     out = []
-    for _, ev in schedule.iterrows():
-        for n in range(1, 6):
-            name = ev.get(f"Session{n}")
-            date = ev.get(f"Session{n}DateUtc")
-            if pd.isna(name) or pd.isna(date):
-                continue
-            kind = session_kind_for(name)
-            if kind is None:
-                continue
-            start = pd.Timestamp(date).to_pydatetime()
-            if start.tzinfo is not None:
-                start = start.astimezone(timezone.utc).replace(tzinfo=None)
-            event_label = ev.get("Location") or ev.get("EventName") or ""
-            out.append({
-                "event": str(event_label),
-                "kind": kind,
-                "start": start,
-                "end": session_end_time(start, kind),
-            })
+    for s in schedule:
+        if s["kind"] not in ("Q", "SQ"):
+            continue
+        start = s["start_utc"]
+        out.append({
+            "event": s["event"],
+            "kind": s["kind"],
+            "start": start,
+            "end": session_end_time(start, s["kind"]),
+            "path": s["path"],
+        })
     return out
 
 
@@ -558,15 +465,13 @@ def rewrite_cron_block(workflow_text, cron_lines):
 
 
 def session_has_data(year, event, kind):
-    """Cheap readiness check via FastF1; True if non-empty laps available."""
+    """Cheap readiness check via the raw livetiming feed."""
     try:
-        import fastf1
-        _ff1_setup()
-        s = fastf1.get_session(year, event, "SQ" if kind == "SQ" else "Q")
-        s.load(telemetry=False, laps=True, weather=False, messages=False)
-        return not s.laps.empty
+        session = ft.find_session(year, event, kind)
+        td = ft.get_timing_data_stream(session["path"])
+        return len(td) > 100
     except Exception as exc:
-        print(f"  FastF1 data not ready for {year} {event} {kind}: {exc}")
+        print(f"  data not ready for {year} {event} {kind}: {exc}")
         return False
 
 
@@ -669,7 +574,7 @@ def reschedule(now, dry_run=False):
 
 
 def render_one(year, event, kind, out_path):
-    print(f"  fetching top-{TOP_N} traces via FastF1...")
+    print(f"  fetching top-{TOP_N} traces from livetiming.formula1.com...")
     traces = load_quali_traces(year, event, kind, top_n=TOP_N)
     if len(traces) < 2:
         raise RuntimeError(
@@ -710,7 +615,7 @@ def render_due(now):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="F1 qualifying-replay pipeline (FastF1)")
+    parser = argparse.ArgumentParser(description="F1 qualifying-replay pipeline (raw livetiming)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the cron block without writing or committing")
     parser.add_argument("--force-session", metavar="SPEC",

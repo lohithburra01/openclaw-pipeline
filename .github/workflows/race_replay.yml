@@ -46,7 +46,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -q opencv-python-headless pillow numpy pandas fastf1 \
+          pip install -q opencv-python-headless pillow numpy \
             google-auth google-auth-httplib2 google-api-python-client
 
       - name: Run race replay pipeline

@@ -1,0 +1,135 @@
+name: Raw Pipeline Smoke
+
+on:
+  push:
+    paths:
+      - '.github/workflows/raw-pipeline-smoke.yml'
+      - 'f1_livetiming.py'
+      - 'race_replay.py'
+      - 'quali_replay.py'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -q opencv-python-headless pillow numpy scipy
+
+      - name: 'mkdir output'
+        run: mkdir -p output logs
+
+      - name: 'A1 curl-shell GET season Index (proven good in earlier probe)'
+        continue-on-error: true
+        run: |
+          c=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://livetiming.formula1.com/static/2026/Index.json")
+          echo "code=$c"; [ "$c" = "200" ]
+
+      - name: 'A2 python urllib GET same URL (replicates f1_livetiming._fetch)'
+        continue-on-error: true
+        run: |
+          python -c "
+          import urllib.request
+          req = urllib.request.Request(
+            'https://livetiming.formula1.com/static/2026/Index.json',
+            headers={'User-Agent': 'Mozilla/5.0 (compatible; openclaw-pipeline)'})
+          with urllib.request.urlopen(req, timeout=30) as resp:
+              body = resp.read()
+          print(f'OK status=200 bytes={len(body)}')
+          " 2>&1 | tee logs/a2.log
+          exit ${PIPESTATUS[0]}
+
+      - name: 'A3 import f1_livetiming; get_season_index(2026)'
+        continue-on-error: true
+        run: |
+          python -c "
+          import f1_livetiming as ft
+          idx = ft.get_season_index(2026)
+          ms = idx.get('Meetings', [])
+          print(f'meetings: {len(ms)}')
+          for m in ms[:3]: print(f'  {m.get(\"Name\")} ({m.get(\"Location\")})')
+          " 2>&1 | tee logs/a3.log
+          exit ${PIPESTATUS[0]}
+
+      - name: 'A4 find Miami R + fetch DriverList + TimingData'
+        continue-on-error: true
+        run: |
+          python -c "
+          import f1_livetiming as ft
+          s = ft.find_session(2026, 'Miami', 'R')
+          print(f'path={s[\"path\"]}')
+          drv = ft.get_driver_list(s['path'])
+          print(f'drivers={len(drv)}')
+          td = ft.get_timing_data_stream(s['path'])
+          print(f'timing_records={len(td)}')
+          " 2>&1 | tee logs/a4.log
+          exit ${PIPESTATUS[0]}
+
+      - name: 'A5 full race loader assertion'
+        continue-on-error: true
+        run: |
+          python -c "
+          import f1_livetiming as ft
+          d, total_laps, n_drv, gs, ge = ft.load_race_traces_for(2026, 'Miami', 'R')
+          print(f'total_laps={total_laps} drivers={n_drv} span={ge:.0f}s')
+          assert total_laps > 50, f'expected >50 laps, got {total_laps}'
+          assert n_drv >= 18, f'expected >=18 drivers, got {n_drv}'
+          print('PASS')
+          " 2>&1 | tee logs/a5.log
+          exit ${PIPESTATUS[0]}
+
+      - name: 'A6 full quali loader assertion'
+        continue-on-error: true
+        run: |
+          python -c "
+          import f1_livetiming as ft
+          tr = ft.load_quali_traces_for(2026, 'Montr', 'Q', top_n=3)
+          for t in tr:
+              print(f'  P{t[\"rank\"]} {t[\"driver\"]} lap={t[\"lap_time\"]:.3f}s samples={len(t[\"time\"])}')
+          assert len(tr) == 3
+          print('PASS')
+          " 2>&1 | tee logs/a6.log
+          exit ${PIPESTATUS[0]}
+
+      - name: 'B render quali (40s) — strict'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python quali_replay.py --force-session "2026 Montr Q" 2>&1 | tee logs/b.log
+          ls -la output/ 2>&1 | tee -a logs/b.log
+          test -s output/montr_2026_Q.mp4
+          sz=$(stat -c%s output/montr_2026_Q.mp4)
+          echo "quali mp4 = $sz bytes"
+          test "$sz" -gt 5000000
+
+      - name: 'C render race short (5s) — strict'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python race_replay.py --force-session "2026 Miami R" --duration 5 2>&1 | tee logs/c.log
+          ls -la output/ 2>&1 | tee -a logs/c.log
+          test -s output/miami_2026_R.mp4
+          sz=$(stat -c%s output/miami_2026_R.mp4)
+          echo "race mp4 = $sz bytes"
+          test "$sz" -gt 3000000
+
+      - name: 'upload logs + MP4s for inspection'
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-pipeline-smoke-artifacts
+          path: |
+            logs/*.log
+            output/*.mp4
+          retention-days: 3
+          if-no-files-found: warn
